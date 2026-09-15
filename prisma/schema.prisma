@@ -1,0 +1,377 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// RODLAB STUDIO — Schéma PWA (v5)
+// Rôles : ADMIN | CLIENT | ENTREPRISE
+// ============================================
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("CLIENT") // ADMIN | CLIENT | ENTREPRISE
+  phone        String?
+  jobTitle     String?
+  companyName  String? // raison sociale pour les comptes ENTREPRISE
+  address      String?
+  city         String?
+  country      String?  @default("Togo")
+  avatarColor  String   @default("#bd4f2b")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  projects      Project[]
+  quotes        Quote[]
+  invoices      Invoice[]
+  messages      Message[]
+  teamOwned     TeamMember[]     @relation("TeamOwner")
+  membership    TeamMember?      @relation("TeamUser")
+  subscriptions PushSubscription[]
+  notifications Notification[]
+
+  // Formation RodLab Academy
+  enrollments       Enrollment[]
+  lessonProgress    LessonProgress[]
+  quizAttempts      QuizAttempt[]
+  certificates      Certificate[]
+  liveRegistrations LiveRegistration[]
+}
+
+// ============================================
+// RODLAB ACADEMY — Formation en ligne (v8.6)
+// Catalogue multi-cours, suivi module par module,
+// quiz final par cours, certificat PDF.
+// ============================================
+
+model Course {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  subtitle      String
+  description   String
+  level         String   @default("Débutant")
+  durationHours Int      @default(14)
+  cover         String?
+  skills        String   @default("[]") // JSON : compétences acquises
+  published     Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  modules      CourseModule[]
+  enrollments  Enrollment[]
+  quiz         Quiz?
+  certificates Certificate[]
+}
+
+model CourseModule {
+  id       String @id @default(cuid())
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order    Int
+  title    String
+  summary  String
+  minutes  Int    @default(45)
+
+  lessons Lesson[]
+
+  @@unique([courseId, order])
+}
+
+model Lesson {
+  id       String       @id @default(cuid())
+  moduleId String
+  module   CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  order    Int
+  title    String
+  minutes  Int          @default(12)
+  content  String // Contenu pédagogique : paragraphes séparés par \n\n, « - » pour puces
+
+  progresses LessonProgress[]
+
+  @@unique([moduleId, order])
+}
+
+model Enrollment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  status      String    @default("ACTIVE") // ACTIVE | COMPLETED
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  quizAttempts QuizAttempt[]
+  certificate  Certificate?
+
+  @@unique([userId, courseId])
+}
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+
+  @@unique([userId, lessonId])
+}
+
+model Quiz {
+  id        String @id @default(cuid())
+  courseId  String @unique
+  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String @default("Examen final")
+  passScore Int    @default(70) // % requis pour obtenir le certificat
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+}
+
+model QuizQuestion {
+  id          String @id @default(cuid())
+  quizId      String
+  quiz        Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  order       Int
+  prompt      String
+  options     String // JSON : ["A", "B", "C", "D"]
+  answer      Int // index de la bonne option
+  explanation String?
+
+  @@unique([quizId, order])
+}
+
+model QuizAttempt {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId       String
+  quiz         Quiz       @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  answers      String // JSON : { [questionId]: indexChoisi }
+  score        Int // % de bonnes réponses
+  correct      Int
+  total        Int
+  passed       Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+}
+
+model Certificate {
+  id           String     @id @default(cuid())
+  code         String     @unique // RODLAB-WEB-XXXXXX, vérifiable publiquement
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId     String
+  course       Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  enrollmentId String     @unique
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  score        Int
+  holderName   String // nom de l'apprenant figé à l'émission
+  issuedAt     DateTime   @default(now())
+}
+
+// ============================================
+// RODLAB LIVE — Sessions de formation à distance
+// Pour les apprenants hors du Togo (Zoom, Meet…)
+// ============================================
+
+model LiveSession {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  summary     String
+  description String
+  platform    String   @default("ZOOM") // ZOOM | MEET | YOUTUBE | STREAMYARD
+  joinUrl     String?
+  embedUrl    String? // lecteur intégré (YouTube live / replay)
+  startsAt    DateTime
+  durationMin Int      @default(90)
+  status      String   @default("SCHEDULED") // SCHEDULED | LIVE | DONE | CANCELLED
+  capacity    Int      @default(200)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  registrations LiveRegistration[]
+}
+
+model LiveRegistration {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  country   String?
+  createdAt DateTime    @default(now())
+
+  @@unique([sessionId, userId])
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  serviceType String    @default("design-graphique")
+  status      String    @default("PENDING") // PENDING | IN_PROGRESS | REVIEW | DELIVERED | CANCELLED
+  progress    Int       @default(0)
+  budget      Float?
+  currency    String    @default("FCFA")
+  clientId    String
+  client      User      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  startDate   DateTime  @default(now())
+  deadline    DateTime?
+  deliveredAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  quotes   Quote[]
+  invoices Invoice[]
+  tasks    ProjectTask[]
+}
+
+model ProjectTask {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  done      Boolean @default(false)
+  order     Int     @default(0)
+}
+
+model Quote {
+  id        String    @id @default(cuid())
+  number    String    @unique // DV-2025-001
+  title     String
+  clientId  String
+  client    User      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project?  @relation(fields: [projectId], references: [id])
+  items     String // JSON [{ label, qty, unitPrice }]
+  subtotal  Float     @default(0)
+  taxRate   Float     @default(18) // TVA Togo 18%
+  taxAmount Float     @default(0)
+  total     Float     @default(0)
+  currency  String    @default("FCFA")
+  status    String    @default("DRAFT") // DRAFT | SENT | ACCEPTED | REFUSED | EXPIRED
+  notes     String?
+  validUntil DateTime?
+  decidedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  invoices Invoice[]
+}
+
+model Invoice {
+  id        String    @id @default(cuid())
+  number    String    @unique // FA-2025-001
+  clientId  String
+  client    User      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project?  @relation(fields: [projectId], references: [id])
+  quoteId   String?
+  quote     Quote?    @relation(fields: [quoteId], references: [id])
+  amount    Float     @default(0)
+  taxRate   Float     @default(18)
+  taxAmount Float     @default(0)
+  total     Float     @default(0)
+  currency  String    @default("FCFA")
+  status    String    @default("SENT") // DRAFT | SENT | PAID | OVERDUE | CANCELLED
+  method    String? // Mobile Money, Virement, Espèces…
+  notes     String?
+  issueDate DateTime  @default(now())
+  dueDate   DateTime?
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id         String    @id @default(cuid())
+  threadId   String // = id du client propriétaire du fil (client <-> studio)
+  senderId   String
+  sender     User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderRole String
+  content    String
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([threadId, createdAt])
+}
+
+model QuoteRequest {
+  id          String    @id @default(cuid())
+  name        String
+  email       String
+  phone       String?
+  company     String?
+  serviceType String    @default("design-graphique")
+  budgetRange String?
+  message     String
+  status      String    @default("NEW") // NEW | IN_REVIEW | CONVERTED | ARCHIVED
+  notes       String?
+  convertedUserId   String?
+  convertedProjectId String?
+  handledAt   DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model SiteContent {
+  id        String   @id @default(cuid())
+  key       String   @unique // ex: hero.title
+  section   String // hero | contact | stats | about | footer
+  label     String
+  value     String   @default("")
+  type      String   @default("TEXT") // TEXT | NUMBER | URL
+  updatedAt DateTime @updatedAt
+}
+
+model TeamMember {
+  id       String    @id @default(cuid())
+  ownerId  String
+  owner    User      @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  userId   String?   @unique
+  user     User?     @relation("TeamUser", fields: [userId], references: [id])
+  name     String
+  email    String
+  phone    String?
+  position String?
+  status   String    @default("INVITED") // INVITED | ACTIVE | SUSPENDED
+  invitedAt DateTime @default(now())
+  joinedAt DateTime?
+
+  @@unique([ownerId, email])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  url       String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+}
