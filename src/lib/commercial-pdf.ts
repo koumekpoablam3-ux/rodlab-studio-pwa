@@ -57,12 +57,19 @@ export async function buildCommercialPdf(doc: DocData): Promise<Uint8Array> {
   const m = 48; // marge
   let y = height - m;
 
+  // La police PDF standard (WinAnsi) ne sait pas encoder certains espaces
+  // Unicode que Intl.NumberFormat("fr-FR") insère entre les milliers (espace
+  // fine insécable U+202F) — on les remplace par un espace normal avant de
+  // dessiner, sans toucher au formatage utilisé ailleurs dans l'app.
+  const clean = (t: string) => t.replace(/[\u00A0\u202F\u2009\u2007]/g, " ");
+
   const text = (t: string, x: number, yy: number, font: PDFFont, size: number, color = INK) => {
-    page.drawText(t, { x, y: yy, size, font, color });
+    page.drawText(clean(t), { x, y: yy, size, font, color });
   };
   const right = (t: string, xRight: number, yy: number, font: PDFFont, size: number, color = INK) => {
-    const w = font.widthOfTextAtSize(t, size);
-    page.drawText(t, { x: xRight - w, y: yy, size, font, color });
+    const safe = clean(t);
+    const w = font.widthOfTextAtSize(safe, size);
+    page.drawText(safe, { x: xRight - w, y: yy, size, font, color });
   };
   const line = (x1: number, yy: number, x2: number, color = LINE, thickness = 0.75) => {
     page.drawLine({ start: { x: x1, y: yy }, end: { x: x2, y: yy }, thickness, color });
