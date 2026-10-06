@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CallProvider } from "@/components/chat/call-provider";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, Inbox, Users, FolderKanban, FileText, Receipt, MessageSquare,
@@ -257,6 +258,7 @@ export function DashboardShell({
   );
 
   return (
+    <CallProvider>
     <div className="flex min-h-screen bg-cream-100">
       {/* Sidebar desktop */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">{sidebar}</aside>
@@ -306,5 +308,6 @@ export function DashboardShell({
         </footer>
       </div>
     </div>
+    </CallProvider>
   );
 }

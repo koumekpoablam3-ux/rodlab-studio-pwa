@@ -26,6 +26,7 @@ model User {
   country      String?  @default("Togo")
   avatarColor  String   @default("#bd4f2b")
   active       Boolean  @default(true) // false = compte suspendu par un admin (connexion bloquée)
+  lastSeenAt   DateTime? // dernière activité dans l'application (présence « en ligne »)
   welcomeSentAt  DateTime?   // email de bienvenue déjà envoyé (inscription ou 1re connexion) — évite les doublons
   resetTokenHash String?     // hash SHA-256 du lien « mot de passe oublié » en cours de validité
   resetTokenExpiry DateTime? // expiration du lien de réinitialisation (1 h après la demande)
@@ -36,6 +37,8 @@ model User {
   quotes        Quote[]
   invoices      Invoice[]
   messages      Message[]
+  convMemberships ConversationMember[]
+  directMessages  DirectMessage[]
   teamOwned     TeamMember[]     @relation("TeamOwner")
   membership    TeamMember?      @relation("TeamUser")
   subscriptions PushSubscription[]
@@ -405,4 +408,98 @@ model Notification {
   url       String?
   readAt    DateTime?
   createdAt DateTime  @default(now())
+}
+
+
+// ============================================
+// MESSAGERIE v2 — conversations entre tous les utilisateurs + appels
+// (l'ancien modèle Message est conservé : migré automatiquement vers Conversation)
+// ============================================
+
+model Conversation {
+  id             String   @id @default(cuid())
+  legacyThreadId String?  @unique // ancien fil « client ↔ studio » migré
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) // dernière activité
+
+  members  ConversationMember[]
+  messages DirectMessage[]
+}
+
+model ConversationMember {
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt     DateTime     @default(now())
+
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+model DirectMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  type           String       @default("TEXT") // TEXT | IMAGE | FILE | AUDIO | CALL
+  content        String       @default("") // texte, légende, ou « VIDEO|ended » pour un appel
+  fileId         String?
+  fileName       String?
+  fileMime       String?
+  fileSize       Int?
+  duration       Int? // secondes (vocal ou appel)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+/// Pièces jointes (photos, documents, vocaux) — stockées en base, comme SiteImage.
+model ChatFile {
+  id        String   @id @default(cuid())
+  mime      String
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now())
+}
+
+model ChatTyping {
+  conversationId String
+  userId         String
+  state          String // typing | recording
+  updatedAt      DateTime @updatedAt
+
+  @@id([conversationId, userId])
+}
+
+model CallSession {
+  id             String    @id @default(cuid())
+  conversationId String
+  callerId       String
+  calleeId       String
+  kind           String // AUDIO | VIDEO
+  status         String    @default("RINGING") // RINGING | ACTIVE | ENDED | DECLINED | MISSED | CANCELLED
+  callerPingAt   DateTime  @default(now())
+  calleePingAt   DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  answeredAt     DateTime?
+  endedAt        DateTime?
+
+  @@index([calleeId, status])
+  @@index([callerId, status])
+}
+
+/// Messages de signalisation WebRTC (offre / réponse / candidats ICE), supprimés dès lecture.
+model CallSignal {
+  id        String   @id @default(cuid())
+  callId    String
+  fromId    String
+  toId      String
+  type      String // offer | answer | ice
+  payload   String
+  createdAt DateTime @default(now())
+
+  @@index([toId, callId, createdAt])
 }

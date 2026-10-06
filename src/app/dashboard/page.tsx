@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { countUnread, recentMessagesFor } from "@/lib/chat";
 import { formatFCFA, formatFCFACompact, formatShortDate, timeAgo } from "@/lib/format";
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/lib/roles";
 import { StatCard, StatusBadge, ProgressRing, EmptyState } from "@/components/shared";
@@ -19,8 +20,8 @@ export default async function DashboardHome() {
     db.project.findMany({ where: { clientId }, orderBy: { updatedAt: "desc" } }),
     db.quote.findMany({ where: { clientId }, orderBy: { createdAt: "desc" }, take: 4 }),
     db.invoice.findMany({ where: { clientId }, orderBy: { issueDate: "desc" }, take: 4 }),
-    db.message.count({ where: { threadId: clientId, senderRole: "ADMIN", readAt: null } }),
-    db.message.findMany({ where: { threadId: clientId }, orderBy: { createdAt: "desc" }, take: 3 }),
+    countUnread(clientId),
+    recentMessagesFor(clientId, 3),
     db.enrollment.findFirst({
       where: { userId: clientId, course: { published: true } },
       include: { certificate: true },
@@ -273,7 +274,7 @@ export default async function DashboardHome() {
             {lastMessages.map((m) => (
               <li key={m.id} className="rounded-2xl bg-cream-100 px-4 py-3">
                 <p className="text-xs font-semibold text-ink-500">
-                  {m.senderRole === "ADMIN" ? "RodLab Studio" : "Vous"} · {timeAgo(m.createdAt)}
+                  {m.mine ? "Vous" : m.senderName} · {timeAgo(m.createdAt)}
                 </p>
                 <p className="mt-0.5 line-clamp-2 text-sm text-ink-700">{m.content}</p>
               </li>

@@ -37,6 +37,8 @@ export async function POST() {
       }),
       db.quoteRequest.deleteMany({ where: { email: { in: DEMO_REQUEST_EMAILS } } }),
     ]);
+    // Conversations laissées sans aucun membre par la suppression des comptes de démo
+    await db.conversation.deleteMany({ where: { members: { none: {} } } }).catch(() => {});
     return NextResponse.json({ ok: true, users: users.count, requests: requests.count });
   } catch (error) {
     console.error("DEMO_CLEANUP_ERROR", error);

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { currentUser } from "@/lib/session";
+import { countUnread, recentClientMessages } from "@/lib/chat";
 import { formatFCFA, formatFCFACompact, formatShortDate, timeAgo } from "@/lib/format";
 import { PROJECT_STATUS_LABELS, REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS, PROJECT_STATUS_COLORS } from "@/lib/roles";
 import { StatCard, StatusBadge } from "@/components/shared";
@@ -12,6 +14,7 @@ export const metadata = { title: "Statistiques" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminStatsPage() {
+  const meId = (await currentUser())?.id ?? "";
   const [invoices, projects, clientsCount, pendingQuotes, newRequests, recentRequests, recentMessages, academyEnrollments, academyCertificates, unreadMessagesTotal, topClientsRaw, totalRequests, sentQuotesCount, acceptedQuotesCount, suspendedCount] =
     await Promise.all([
       db.invoice.findMany({ select: { total: true, status: true, issueDate: true, clientId: true } }),
@@ -20,15 +23,10 @@ export default async function AdminStatsPage() {
       db.quote.count({ where: { status: "SENT" } }),
       db.quoteRequest.count({ where: { status: "NEW" } }),
       db.quoteRequest.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
-      db.message.findMany({
-        where: { senderRole: { not: "ADMIN" } },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        include: { sender: { select: { id: true, name: true, companyName: true, role: true } } },
-      }),
+      recentClientMessages(5),
       db.enrollment.count(),
       db.certificate.count(),
-      db.message.count({ where: { senderRole: { not: "ADMIN" }, readAt: null } }),
+      countUnread(meId),
       db.invoice.groupBy({
         by: ["clientId"],
         where: { status: "PAID" },

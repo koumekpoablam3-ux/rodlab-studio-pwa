@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { SCHEMA_STATEMENTS } from "@/lib/bootstrap-schema";
 import { seedDemoData } from "@/lib/demo-seed";
 import { syncMissingAcademyCourses } from "@/lib/academy-sync";
+import { CHAT_STATEMENTS, migrateLegacyMessages } from "@/lib/chat-schema";
 
 /**
  * RODLAB STUDIO — Auto-réparation de la base de données
@@ -48,11 +49,20 @@ async function runBootstrap() {
     );
     await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "active" BOOLEAN NOT NULL DEFAULT true`);
     await db.$executeRawUnsafe(`ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "reminderSentAt" TIMESTAMP(3)`);
+    await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lastSeenAt" TIMESTAMP(3)`);
+    for (const statement of CHAT_STATEMENTS) await db.$executeRawUnsafe(statement);
     await db.$executeRawUnsafe(
       `CREATE TABLE IF NOT EXISTS "SiteImage" ( "id" TEXT NOT NULL PRIMARY KEY, "mime" TEXT NOT NULL, "size" INTEGER NOT NULL, "data" BYTEA NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP )`
     );
   } catch (error) {
     console.error("[bootstrap] Migration incrémentale échouée (non bloquant) :", error);
+  }
+
+  // 3 bis) Anciens fils « client ↔ studio » → conversations de la messagerie v2 (idempotent).
+  try {
+    await migrateLegacyMessages();
+  } catch (error) {
+    console.error("[bootstrap] Migration des anciens messages échouée (non bloquant) :", error);
   }
 
   // 4) Cours ajoutés au catalogue après le seed initial (indépendant de userCount,

@@ -1,16 +1,14 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { countUnread } from "@/lib/chat";
 import { DashboardShell } from "@/components/dashboard/shell";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/connexion");
 
-  const unreadMessages = await db.message.count({
-    where: { threadId: session.user.id, senderRole: "ADMIN", readAt: null },
-  });
+  const unreadMessages = await countUnread(session.user.id);
 
   return (
     <DashboardShell

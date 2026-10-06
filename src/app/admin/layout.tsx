@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { countUnread } from "@/lib/chat";
 import { DashboardShell } from "@/components/dashboard/shell";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -11,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const [newRequests, unreadThreads] = await Promise.all([
     db.quoteRequest.count({ where: { status: "NEW" } }),
-    db.message.count({ where: { senderRole: { not: "ADMIN" }, readAt: null } }),
+    countUnread(session.user.id),
   ]);
 
   return (
