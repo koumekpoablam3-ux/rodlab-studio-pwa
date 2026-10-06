@@ -110,6 +110,29 @@ export async function sendEmail(to: string, subject: string, body: string, url?:
 }
 
 /**
+ * Comme sendEmail, mais RAPPORTE le résultat (utile quand l'utilisateur doit savoir si le message
+ * est vraiment parti, ex. invitation d'un administrateur) au lieu d'ignorer les erreurs.
+ */
+export async function sendEmailStrict(
+  to: string, subject: string, body: string, url?: string, ctaLabel?: string
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!isConfigured()) return { ok: false, reason: "L'envoi d'emails n'est pas configuré sur le serveur (variables SMTP_USER et SMTP_PASS)." };
+  try {
+    await getTransporter().sendMail({
+      from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+      to,
+      subject,
+      html: buildHtml(subject, body, url, ctaLabel),
+    });
+    return { ok: true };
+  } catch (error) {
+    console.error("[email] Erreur d'envoi:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    return { ok: false, reason: `Le serveur d'emails a refusé l'envoi (${msg.slice(0, 140)}).` };
+  }
+}
+
+/**
  * Email de bienvenue — envoyé une seule fois par compte, à la première occasion :
  * inscription (API /api/register) OU première connexion réussie (authorize() de
  * NextAuth, pour les comptes créés par un admin, de démonstration, ou antérieurs

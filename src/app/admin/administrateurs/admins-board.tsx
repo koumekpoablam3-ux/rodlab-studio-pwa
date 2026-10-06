@@ -17,7 +17,8 @@ type Admin = {
   id: string; name: string; email: string; jobTitle: string | null; avatarColor: string; active: boolean;
   isDirector: boolean; permissions: string | null; invitePending: boolean; lastSeenAt: string | null; createdAt: string;
 };
-type LinkResult = { name: string; email: string; link: string; emailSent: boolean; kind: "invite" | "reset" };
+type LinkResult = { name: string; email: string; link: string; emailSent: boolean; emailError: string | null; kind: "invite" | "reset" };
+const errText = (d: { error?: string; detail?: string }, fallback: string) => (d.error ?? fallback) + (d.detail ? ` — ${d.detail}` : "");
 
 const permLabel = (k: string) => PERMISSIONS.find((p) => p.key === k)?.label ?? k;
 
@@ -85,8 +86,8 @@ export function AdminsBoard({ myId, admins }: { myId: string; admins: Admin[] })
       name: form.name, email: form.email, jobTitle: form.jobTitle || null, permissions: perms, avatarColor: form.color,
     });
     setBusy(null);
-    if (!ok) { toast.error(data.error ?? "Création impossible"); return; }
-    setResult({ name: data.user.name, email: data.user.email, link: data.inviteLink, emailSent: data.emailSent, kind: "invite" });
+    if (!ok) { toast.error(errText(data, "Création impossible"), { duration: 9000 }); return; }
+    setResult({ name: data.user.name, email: data.user.email, link: data.inviteLink, emailSent: data.emailSent, emailError: data.emailError ?? null, kind: "invite" });
     setCreating(false);
     setForm({ name: "", email: "", jobTitle: "", color: AVATAR_COLORS[0]!, preset: "" });
     setPerms([]);
@@ -122,8 +123,8 @@ export function AdminsBoard({ myId, admins }: { myId: string; admins: Admin[] })
     setBusy(a.id);
     const { ok, data } = await call(`/api/admin/admins/${a.id}`, "PATCH", { action: "send-link" });
     setBusy(null);
-    if (!ok) { toast.error(data.error ?? "Envoi impossible"); return; }
-    setResult({ name: a.name, email: a.email, link: data.inviteLink, emailSent: data.emailSent, kind: data.kind });
+    if (!ok) { toast.error(errText(data, "Envoi impossible"), { duration: 9000 }); return; }
+    setResult({ name: a.name, email: a.email, link: data.inviteLink, emailSent: data.emailSent, emailError: data.emailError ?? null, kind: data.kind });
     router.refresh();
   }
 
@@ -166,8 +167,8 @@ export function AdminsBoard({ myId, admins }: { myId: string; admins: Admin[] })
               </h2>
               <p className="mt-1 text-sm text-ink-600">
                 {result.emailSent
-                  ? <>Un email a été envoyé à <strong>{result.email}</strong>. Vous pouvez aussi lui transmettre ce lien vous-même (WhatsApp, etc.) :</>
-                  : <>L&apos;envoi d&apos;emails n&apos;est pas configuré sur ce serveur : transmettez ce lien à <strong>{result.email}</strong> vous-même (WhatsApp, etc.) :</>}
+                  ? <>Un email a été envoyé à <strong>{result.email}</strong> (pensez à lui dire de regarder aussi ses spams). Vous pouvez aussi lui transmettre ce lien vous-même (WhatsApp, etc.) :</>
+                  : <>Le compte est créé, mais <strong>l&apos;email n&apos;a pas pu partir</strong>{result.emailError ? ` : ${result.emailError}` : "."} Transmettez ce lien à <strong>{result.email}</strong> vous-même (WhatsApp, etc.) — il fonctionne exactement pareil :</>}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <input readOnly value={result.link} onFocus={(e) => e.currentTarget.select()} aria-label="Lien personnel" className="h-10 min-w-0 flex-1 rounded-xl border border-cream-300 bg-white px-3 text-xs" />

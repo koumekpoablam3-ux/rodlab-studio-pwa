@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/access";
 import { serializePermissions } from "@/lib/permissions";
-import { issueSetupLink, sendSetupEmail } from "@/lib/invite";
+import { issueSetupLink, sendSetupEmail, siteOrigin } from "@/lib/invite";
 
 const updateSchema = z.object({
   name: z.string().trim().min(2).max(80).optional(),
@@ -41,9 +41,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     if (action === "send-link") {
       const kind = target.invitePending ? "invite" : "reset";
-      const { link } = await issueSetupLink(target.id, kind);
-      const emailSent = await sendSetupEmail(target, link, kind, guard.user.name || "Le directeur");
-      return NextResponse.json({ ok: true, inviteLink: link, emailSent, kind });
+      const { link } = await issueSetupLink(target.id, kind, siteOrigin(req));
+      const mail = await sendSetupEmail(target, link, kind, guard.user.name || "Le directeur");
+      return NextResponse.json({ ok: true, inviteLink: link, emailSent: mail.sent, emailError: mail.reason ?? null, kind });
     }
 
     const data: Record<string, unknown> = { ...rest };
@@ -56,7 +56,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ user });
   } catch (error) {
     console.error("ADMIN_UPDATE_ERROR", error);
-    return NextResponse.json({ error: "Impossible de modifier le compte" }, { status: 500 });
+    const detail = error instanceof Error ? error.message.replace(/\s+/g, " ").slice(-180) : "";
+    return NextResponse.json({ error: "Impossible de modifier le compte", detail }, { status: 500 });
   }
 }
 

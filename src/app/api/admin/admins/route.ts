@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/access";
 import { serializePermissions } from "@/lib/permissions";
-import { issueSetupLink, sendSetupEmail } from "@/lib/invite";
+import { issueSetupLink, sendSetupEmail, siteOrigin } from "@/lib/invite";
 import { AVATAR_COLORS } from "@/lib/roles";
 
 // Adresses « de fonction » interdites : chaque administrateur doit avoir SON adresse personnelle.
@@ -59,11 +59,12 @@ export async function POST(req: NextRequest) {
       select: { id: true, name: true, email: true },
     });
 
-    const { link } = await issueSetupLink(user.id, "invite");
-    const emailSent = await sendSetupEmail(user, link, "invite", guard.user.name || "Le directeur");
-    return NextResponse.json({ user, inviteLink: link, emailSent }, { status: 201 });
+    const { link } = await issueSetupLink(user.id, "invite", siteOrigin(req));
+    const mail = await sendSetupEmail(user, link, "invite", guard.user.name || "Le directeur");
+    return NextResponse.json({ user, inviteLink: link, emailSent: mail.sent, emailError: mail.reason ?? null }, { status: 201 });
   } catch (error) {
     console.error("ADMIN_CREATE_ERROR", error);
-    return NextResponse.json({ error: "Impossible de créer le compte" }, { status: 500 });
+    const detail = error instanceof Error ? error.message.replace(/\s+/g, " ").slice(-180) : "";
+    return NextResponse.json({ error: "Impossible de créer le compte", detail }, { status: 500 });
   }
 }
