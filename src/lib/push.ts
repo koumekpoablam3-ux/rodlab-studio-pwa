@@ -29,6 +29,9 @@ export type PushPayload = {
   tag?: string;
   /** Passer à false pour ne pas envoyer d'email pour cette notification précise (email envoyé par défaut). */
   email?: boolean;
+  /** Appel entrant : le service worker fait « sonner » la notification tant que l'appel dure. */
+  call?: boolean;
+  callId?: string;
 };
 
 /** Enregistre une notification en base, envoie un email, puis pousse vers tous les abonnements de l'utilisateur. */
@@ -70,7 +73,9 @@ export async function notifyUser(userId: string, payload: PushPayload) {
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
           JSON.stringify(payload),
-          { TTL: 60 * 60 * 24 }
+          // Appel : livraison immédiate (priorité haute) et expiration rapide — un appel qui n'a pas pu
+          // arriver (téléphone hors connexion) ne doit jamais sonner 10 minutes plus tard.
+          payload.call ? { TTL: 45, urgency: "high" } : { TTL: 60 * 60 * 24 }
         );
       } catch (error: unknown) {
         const statusCode = (error as { statusCode?: number })?.statusCode;

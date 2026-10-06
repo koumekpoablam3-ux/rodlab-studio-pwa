@@ -50,6 +50,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const ringTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioCtx = useRef<AudioContext | null>(null);
   const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoAnswerId = useRef<string | null>(null);
   const localVideo = useRef<HTMLVideoElement>(null);
   const remoteVideo = useRef<HTMLVideoElement>(null);
 
@@ -62,24 +63,32 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const startRing = useCallback(() => {
     stopRing();
+    const burst = (ctx: AudioContext, at: number) => {
+      for (const freq of [440, 480]) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, at);
+        gain.gain.exponentialRampToValueAtTime(0.18, at + 0.04);
+        gain.gain.setValueAtTime(0.18, at + 0.38);
+        gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.44);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(at);
+        osc.stop(at + 0.5);
+      }
+    };
     const beep = () => {
       try {
         audioCtx.current ??= new AudioContext();
         const ctx = audioCtx.current;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = 440;
-        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.9);
-        osc.connect(gain).connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 1);
-        navigator.vibrate?.([300, 150, 300]);
+        void ctx.resume();
+        burst(ctx, ctx.currentTime);
+        burst(ctx, ctx.currentTime + 0.6);
+        navigator.vibrate?.([400, 200, 400]);
       } catch { /* le navigateur peut bloquer le son sans geste utilisateur */ }
     };
     beep();
-    ringTimer.current = setInterval(beep, 2200);
+    ringTimer.current = setInterval(beep, 3000);
   }, [stopRing]);
 
   // ───── Nettoyage complet ─────
@@ -199,9 +208,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cleanup, flushOutbox]);
 
-  async function acceptCall() {
-    if (!incoming) return;
-    const call = incoming;
+  async function acceptCall(callArg?: Incoming) {
+    const call = callArg ?? incoming;
+    if (!call) return;
     stopRing();
     setKind(call.kind);
     setPeer(call.caller ?? { name: "Appel", avatarColor: null });
@@ -255,7 +264,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     let timer: ReturnType<typeof setTimeout>;
 
     async function tick() {
-      let next = document.hidden ? 8000 : 3500;
+      let next = document.hidden ? 4000 : 3500;
       try {
         const id = callIdRef.current;
         const res = await fetch(id ? `/api/calls/poll?callId=${id}` : "/api/calls/poll", { cache: "no-store" });
@@ -265,7 +274,16 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
           if (p === "idle" || p === "incoming") {
             if (data.incoming) {
-              if (p === "idle") { setIncoming(data.incoming); setPhaseBoth("incoming"); startRing(); }
+              if (p === "idle") {
+                if (autoAnswerId.current === data.incoming.id) {
+                  // Ouvert depuis le bouton « Répondre » de la notification
+                  autoAnswerId.current = null;
+                  setPhaseBoth("incoming");
+                  void acceptCall(data.incoming);
+                } else {
+                  setIncoming(data.incoming); setPhaseBoth("incoming"); startRing();
+                }
+              }
             } else if (p === "incoming") {
               stopRing(); setIncoming(null); setPhaseBoth("idle");
               toast.info("Appel manqué");
@@ -289,6 +307,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     timer = setTimeout(tick, 800);
     return () => { stopped = true; clearTimeout(timer); };
+  }, []);
+
+  // Ouvert depuis « Répondre » (notification) : mémoriser l'appel à décrocher puis nettoyer l'URL
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const id = url.searchParams.get("answer");
+    if (id) {
+      autoAnswerId.current = id;
+      url.searchParams.delete("answer");
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    }
   }, []);
 
   // Durée de l'appel
@@ -344,7 +373,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             <button onClick={declineCall} aria-label="Refuser l'appel" className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 shadow-lg transition hover:bg-red-700">
               <PhoneOff className="h-7 w-7" />
             </button>
-            <button onClick={acceptCall} aria-label="Répondre à l'appel" className="flex h-16 w-16 animate-bounce items-center justify-center rounded-full bg-green-600 shadow-lg transition hover:bg-green-700">
+            <button onClick={() => acceptCall()} aria-label="Répondre à l'appel" className="flex h-16 w-16 animate-bounce items-center justify-center rounded-full bg-green-600 shadow-lg transition hover:bg-green-700">
               {incoming.kind === "VIDEO" ? <Video className="h-7 w-7" /> : <Phone className="h-7 w-7" />}
             </button>
           </div>

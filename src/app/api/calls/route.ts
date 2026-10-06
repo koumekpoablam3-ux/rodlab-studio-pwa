@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
     url: messagesUrlFor(callee.user.role, conversation.id),
     tag: "call",
     email: false,
+    call: true,
+    callId: call.id,
   });
 
   return NextResponse.json({ call: { id: call.id, kind: call.kind, status: call.status, conversationId: call.conversationId } }, { status: 201 });
