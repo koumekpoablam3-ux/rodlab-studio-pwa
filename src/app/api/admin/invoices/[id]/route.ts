@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/access";
 import { db } from "@/lib/db";
 import { notifyUser } from "@/lib/push";
 
@@ -13,10 +12,9 @@ const updateSchema = z.object({
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const guard = await requireAdmin("invoices");
+  if (!guard.ok) return guard.response;
+  const session = { user: guard.user };
 
   const { id } = await params;
   try {
@@ -51,10 +49,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const guard = await requireAdmin("invoices");
+  if (!guard.ok) return guard.response;
+  const session = { user: guard.user };
   const { id } = await params;
   try {
     await db.invoice.delete({ where: { id } });

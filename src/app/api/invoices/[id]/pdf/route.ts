@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { adminCan } from "@/lib/access";
 import { db } from "@/lib/db";
 import { buildCommercialPdf } from "@/lib/commercial-pdf";
 import { INVOICE_STATUS_LABELS } from "@/lib/roles";
@@ -19,7 +20,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   });
 
   if (!invoice) return NextResponse.json({ error: "Facture introuvable" }, { status: 404 });
-  if (session.user.role !== "ADMIN" && invoice.clientId !== session.user.id) {
+  if (!(await adminCan(session.user.id, session.user.role, "invoices")) && invoice.clientId !== session.user.id) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 

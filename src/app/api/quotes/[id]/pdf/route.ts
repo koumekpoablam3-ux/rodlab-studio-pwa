@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { adminCan } from "@/lib/access";
 import { db } from "@/lib/db";
 import { buildCommercialPdf } from "@/lib/commercial-pdf";
 import { QUOTE_STATUS_LABELS } from "@/lib/roles";
@@ -19,7 +20,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   });
 
   if (!quote) return NextResponse.json({ error: "Devis introuvable" }, { status: 404 });
-  if (session.user.role !== "ADMIN" && quote.clientId !== session.user.id) {
+  if (!(await adminCan(session.user.id, session.user.role, "quotes")) && quote.clientId !== session.user.id) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 

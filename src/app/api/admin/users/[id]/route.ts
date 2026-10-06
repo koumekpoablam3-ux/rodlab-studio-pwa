@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { requireAdmin } from "@/lib/access";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 const updateSchema = z.object({
@@ -12,10 +11,22 @@ const updateSchema = z.object({
   companyName: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
-  role: z.enum(["ADMIN", "CLIENT", "ENTREPRISE"]).optional(),
+  role: z.enum(["CLIENT", "ENTREPRISE"]).optional(),
   active: z.boolean().optional(),
   newPassword: z.string().min(8).optional().nullable(),
 });
+
+
+async function lockedAdminTarget(id: string) {
+  const target = await db.user.findUnique({ where: { id }, select: { role: true } });
+  if (target?.role === "ADMIN") {
+    return NextResponse.json(
+      { error: "Les comptes administrateur sont gérés par le directeur, depuis la page « Administrateurs »." },
+      { status: 403 }
+    );
+  }
+  return null;
+}
 
 /**
  * Gestion d'un profil par l'admin :
@@ -24,12 +35,13 @@ const updateSchema = z.object({
  *  - DELETE : suppression du compte
  */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const guard = await requireAdmin("clients");
+  if (!guard.ok) return guard.response;
+  const session = { user: guard.user };
 
   const { id } = await params;
+  const locked = await lockedAdminTarget(id);
+  if (locked) return locked;
   const user = await db.user.findUnique({
     where: { id },
     select: {
@@ -47,12 +59,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const guard = await requireAdmin("clients");
+  if (!guard.ok) return guard.response;
+  const session = { user: guard.user };
 
   const { id } = await params;
+  const locked = await lockedAdminTarget(id);
+  if (locked) return locked;
   try {
     const body = await req.json();
     const parsed = updateSchema.safeParse(body);
@@ -64,17 +77,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const { newPassword, role, active, ...rest } = parsed.data;
-
-    // Garde-fous : un admin ne peut pas s'auto-suspendre ni se retirer son propre
-    // rôle admin (pour éviter de se retrouver bloqué hors de son propre compte).
-    if (id === session.user.id) {
-      if (active === false) {
-        return NextResponse.json({ error: "Vous ne pouvez pas suspendre votre propre compte" }, { status: 400 });
-      }
-      if (role && role !== "ADMIN") {
-        return NextResponse.json({ error: "Vous ne pouvez pas retirer votre propre rôle administrateur" }, { status: 400 });
-      }
-    }
 
     const data: Record<string, unknown> = { ...rest };
     if (role) data.role = role;
@@ -95,12 +97,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const guard = await requireAdmin("clients");
+  if (!guard.ok) return guard.response;
+  const session = { user: guard.user };
 
   const { id } = await params;
+  const locked = await lockedAdminTarget(id);
+  if (locked) return locked;
   if (id === session.user.id) {
     return NextResponse.json({ error: "Vous ne pouvez pas supprimer votre propre compte" }, { status: 400 });
   }

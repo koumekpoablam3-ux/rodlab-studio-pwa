@@ -1,11 +1,14 @@
 import { db } from "@/lib/db";
 import { TeamBoard } from "./team-board";
 
+import { requirePermission } from "@/lib/access";
 export const metadata = { title: "Équipe & comptes" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminEquipePage() {
+  await requirePermission("clients");
   const users = await db.user.findMany({
+    where: { role: { not: "ADMIN" } },
     select: {
       id: true, name: true, email: true, role: true, phone: true, companyName: true,
       jobTitle: true, city: true, avatarColor: true, createdAt: true,

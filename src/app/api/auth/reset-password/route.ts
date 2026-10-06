@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 12);
     await db.user.update({
       where: { id: user.id },
-      data: { passwordHash, resetTokenHash: null, resetTokenExpiry: null },
+      data: { passwordHash, resetTokenHash: null, resetTokenExpiry: null, invitePending: false },
     });
 
     // Confirmation de sécurité : le titulaire sait que son mot de passe a changé.

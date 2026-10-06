@@ -1,10 +1,12 @@
 import { db } from "@/lib/db";
 import { ClientsBoard } from "./clients-board";
 
+import { requirePermission } from "@/lib/access";
 export const metadata = { title: "Clients" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminClientsPage() {
+  await requirePermission("clients");
   const users = await db.user.findMany({
     where: { role: { in: ["CLIENT", "ENTREPRISE"] } },
     select: {

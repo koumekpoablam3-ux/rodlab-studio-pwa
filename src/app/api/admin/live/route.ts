@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin as requireAdminAccess } from "@/lib/access";
 import { db } from "@/lib/db";
 
 const PLATFORMS = ["ZOOM", "MEET", "YOUTUBE", "STREAMYARD"];
 const STATUSES = ["SCHEDULED", "LIVE", "DONE", "CANCELLED"];
 
 async function requireAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "ADMIN") return null;
-  return session;
+  const guard = await requireAdminAccess("training");
+  return guard.ok ? { user: guard.user } : null;
 }
 
 function slugify(text: string) {

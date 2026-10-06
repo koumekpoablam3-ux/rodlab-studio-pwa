@@ -1,10 +1,12 @@
 import { db } from "@/lib/db";
 import { RequestBoard } from "./request-board";
 
+import { requirePermission } from "@/lib/access";
 export const metadata = { title: "Demandes de devis" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminDemandesPage() {
+  await requirePermission("requests");
   const requests = await db.quoteRequest.findMany({ orderBy: { createdAt: "desc" } });
   return (
     <div className="mx-auto max-w-7xl">

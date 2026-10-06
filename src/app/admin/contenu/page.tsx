@@ -4,10 +4,12 @@ import { REALISATIONS, BLOG_POSTS } from "@/lib/site-data-content";
 import { DEFAULT_CAROUSEL, DEFAULT_TEAM_IDS, getOverrides, withTeamIds } from "@/lib/site-overrides";
 import { ContentEditor, type Group } from "./content-editor";
 
+import { requirePermission } from "@/lib/access";
 export const metadata = { title: "Contenu du site" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminContenuPage() {
+  const access = await requirePermission("content");
   const [contents, o] = await Promise.all([
     db.siteContent.findMany({ orderBy: [{ section: "asc" }, { key: "asc" }] }),
     getOverrides(),
@@ -84,6 +86,7 @@ export default async function AdminContenuPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <ContentEditor
+        isDirector={access.isDirector}
         initialContents={contents}
         groups={groups}
         carousel={{ key: "carousel.slides", def: carouselDefault, value: o["carousel.slides"]?.trim() ? o["carousel.slides"] : carouselDefault }}

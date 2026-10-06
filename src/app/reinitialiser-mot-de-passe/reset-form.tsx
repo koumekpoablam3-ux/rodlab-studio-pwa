@@ -26,6 +26,7 @@ export function ResetPasswordForm() {
   const [success, setSuccess] = useState(false);
 
   const invalidToken = !token;
+  const isInvitation = searchParams.get("invitation") === "1";
   const mismatch = confirm.length > 0 && password !== confirm;
   const tooShort = password.length > 0 && password.length < 8;
 
@@ -101,9 +102,9 @@ export function ResetPasswordForm() {
         <Link href="/" className="inline-flex">
           <Logo size="md" />
         </Link>
-        <h1 className="mt-6 font-display text-3xl font-semibold text-ink-900">Nouveau mot de passe</h1>
+        <h1 className="mt-6 font-display text-3xl font-semibold text-ink-900">{isInvitation ? "Bienvenue ! Créez votre mot de passe" : "Nouveau mot de passe"}</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-500">
-          Choisissez un mot de passe solide : au moins 8 caractères, avec majuscules, chiffres
+          {isInvitation ? "Votre compte administrateur est prêt. Ce mot de passe n'appartient qu'à vous : personne d'autre ne le connaîtra, et vous pourrez le changer à tout moment. " : ""}Choisissez un mot de passe solide : au moins 8 caractères, avec majuscules, chiffres
           ou symboles.
         </p>
       </div>

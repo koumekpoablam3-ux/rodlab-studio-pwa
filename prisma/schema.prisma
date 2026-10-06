@@ -26,6 +26,10 @@ model User {
   country      String?  @default("Togo")
   avatarColor  String   @default("#bd4f2b")
   active       Boolean  @default(true) // false = compte suspendu par un admin (connexion bloquée)
+  isDirector    Boolean  @default(false) // le directeur : seul à gérer les comptes administrateur
+  permissions   String?  // administrateurs : sections autorisées (séparées par des virgules) ; null = ancien compte, accès complet
+  invitePending Boolean  @default(false) // invitation envoyée, mot de passe pas encore défini par la personne
+  invitedById   String?  // directeur à l'origine de l'invitation
   lastSeenAt   DateTime? // dernière activité dans l'application (présence « en ligne »)
   welcomeSentAt  DateTime?   // email de bienvenue déjà envoyé (inscription ou 1re connexion) — évite les doublons
   resetTokenHash String?     // hash SHA-256 du lien « mot de passe oublié » en cours de validité

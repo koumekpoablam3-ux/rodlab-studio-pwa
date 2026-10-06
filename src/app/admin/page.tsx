@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { currentUser } from "@/lib/session";
+import { getAccess } from "@/lib/access";
 import { countUnread, recentClientMessages } from "@/lib/chat";
 import { formatFCFA, formatFCFACompact, formatShortDate, timeAgo } from "@/lib/format";
 import { PROJECT_STATUS_LABELS, REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS, PROJECT_STATUS_COLORS } from "@/lib/roles";
@@ -14,7 +14,9 @@ export const metadata = { title: "Statistiques" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminStatsPage() {
-  const meId = (await currentUser())?.id ?? "";
+  const access = await getAccess();
+  const meId = access?.id ?? "";
+  const canMoney = !!access?.can("invoices");
   const [invoices, projects, clientsCount, pendingQuotes, newRequests, recentRequests, recentMessages, academyEnrollments, academyCertificates, unreadMessagesTotal, topClientsRaw, totalRequests, sentQuotesCount, acceptedQuotesCount, suspendedCount] =
     await Promise.all([
       db.invoice.findMany({ select: { total: true, status: true, issueDate: true, clientId: true } }),
@@ -118,8 +120,12 @@ export default async function AdminStatsPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {canMoney && (
+          <>
         <StatCard icon={Banknote} label="Revenus encaissés" value={formatFCFACompact(paid)} hint="Factures payées" accent="forest" />
         <StatCard icon={Hourglass} label="En attente de paiement" value={formatFCFACompact(pending)} hint="Factures envoyées & en retard" accent="terra" />
+          </>
+        )}
         <StatCard icon={FolderKanban} label="Projets actifs" value={String(activeProjects)} hint={`${projects.length} projets au total`} accent="gold" />
         <StatCard icon={Users} label="Clients" value={String(clientsCount)} hint={suspendedCount > 0 ? `dont ${suspendedCount} suspendu(s)` : "Comptes client & entreprise"} accent="ink" />
         <StatCard icon={MessageSquare} label="Messages non lus" value={String(unreadMessagesTotal)} hint="Tous fils confondus" accent="terra" />
@@ -160,11 +166,13 @@ export default async function AdminStatsPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        {canMoney && (
         <div className="rounded-3xl border border-cream-300 bg-card p-6 shadow-card">
           <h2 className="font-display text-lg font-semibold text-ink-900">Revenus des 8 derniers mois</h2>
           <p className="mb-4 text-xs text-ink-400">Factures encaissées, TVA incluse</p>
           <RevenueChart data={monthsData} />
         </div>
+        )}
         <div className="rounded-3xl border border-cream-300 bg-card p-6 shadow-card">
           <h2 className="font-display text-lg font-semibold text-ink-900">Projets par statut</h2>
           <StatusDonut data={statusCounts} />

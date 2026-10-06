@@ -44,7 +44,6 @@ export function TeamBoard({ initialUsers }: { initialUsers: UserRow[] }) {
     return users.filter((u) => `${u.name} ${u.email} ${u.companyName ?? ""} ${ROLE_LABELS[u.role as Role]}`.toLowerCase().includes(q));
   }, [users, search]);
 
-  const admins = users.filter((u) => u.role === "ADMIN");
   const clients = users.filter((u) => u.role === "CLIENT");
   const entreprises = users.filter((u) => u.role === "ENTREPRISE");
 
@@ -130,7 +129,7 @@ export function TeamBoard({ initialUsers }: { initialUsers: UserRow[] }) {
     <>
       <PageHeader
         title="Équipe & comptes"
-        description={`${admins.length} administrateur(s) · ${clients.length} client(s) · ${entreprises.length} entreprise(s)`}
+        description={`${clients.length} client(s) · ${entreprises.length} entreprise(s)`}
         actions={
           <button onClick={() => setCreateOpen(true)} className="inline-flex items-center gap-2 rounded-full bg-terra-600 px-5 py-2.5 text-sm font-semibold text-cream-50 shadow-chip transition hover:bg-terra-700">
             <Plus className="h-4 w-4" aria-hidden="true" /> Nouveau compte
@@ -182,7 +181,7 @@ export function TeamBoard({ initialUsers }: { initialUsers: UserRow[] }) {
                           aria-label={`Rôle de ${u.name}`}
                           className={cn("h-9 rounded-xl border px-2.5 text-xs font-semibold outline-none", ROLE_COLORS[u.role as Role])}
                         >
-                          {(["ADMIN", "CLIENT", "ENTREPRISE"] as Role[]).map((r) => (
+                          {(["CLIENT", "ENTREPRISE"] as Role[]).map((r) => (
                             <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                           ))}
                         </select>
@@ -225,7 +224,6 @@ export function TeamBoard({ initialUsers }: { initialUsers: UserRow[] }) {
                 <select id="nu-role" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))} className="h-11 w-full rounded-xl border border-input bg-white px-3.5 text-sm outline-none">
                   <option value="CLIENT">Client</option>
                   <option value="ENTREPRISE">Entreprise</option>
-                  <option value="ADMIN">Administrateur</option>
                 </select>
               </div>
               <div className="space-y-1.5">

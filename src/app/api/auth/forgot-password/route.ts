@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     // Anti-spam : une demande existe déjà (valide pendant 1 h → si plus de
     // 55 min restent, elle date de moins de 5 min). On ne renvoie pas d'email.
     const now = new Date();
-    if (user.resetTokenExpiry && user.resetTokenExpiry.getTime() - now.getTime() > 55 * 60 * 1000) {
+    if (!user.invitePending && user.resetTokenExpiry && user.resetTokenExpiry.getTime() - now.getTime() > 55 * 60 * 1000) {
       return NextResponse.json(genericResponse);
     }
 

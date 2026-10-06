@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { adminCan, requireAdmin } from "@/lib/access";
 import { db } from "@/lib/db";
 import { notifyUser } from "@/lib/push";
 
@@ -29,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Données invalides" }, { status: 400 });
   }
 
-  const isAdmin = session.user.role === "ADMIN";
+  const isAdmin = await adminCan(session.user.id, session.user.role, "quotes");
   const isOwner = quote.clientId === session.user.id;
 
   if (!isAdmin && !isOwner) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
@@ -75,10 +76,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const guard = await requireAdmin("quotes");
+  if (!guard.ok) return guard.response;
+  const session = { user: guard.user };
   const { id } = await params;
   try {
     await db.quote.delete({ where: { id } });

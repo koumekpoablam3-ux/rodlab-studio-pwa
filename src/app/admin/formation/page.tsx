@@ -4,10 +4,12 @@ import { GraduationCap, Users, Award, TrendingUp, BookOpen, ArrowRight, CheckCir
 import { db } from "@/lib/db";
 import { courseVisual } from "@/lib/academy/course-visuals";
 
+import { requirePermission } from "@/lib/access";
 export const metadata: Metadata = { title: "Academy — Administration RodLab" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminFormationPage() {
+  await requirePermission("training");
   const courses = await db.course.findMany({
     where: { published: true },
     orderBy: { createdAt: "asc" },

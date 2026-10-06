@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/access";
 import { db } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -12,10 +11,9 @@ const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 /** Téléversement d'une photo (ADMIN uniquement). Retourne l'URL publique. */
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const guard = await requireAdmin("content");
+  if (!guard.ok) return guard.response;
+  const session = { user: guard.user };
 
   try {
     const form = await req.formData();

@@ -53,11 +53,13 @@ const iconBtn =
   "inline-flex h-8 w-8 items-center justify-center rounded-full border border-cream-300 text-ink-500 transition hover:bg-cream-100 disabled:opacity-30";
 
 export function ContentEditor({
+  isDirector,
   initialContents,
   groups,
   carousel,
   team,
 }: {
+  isDirector: boolean;
   initialContents: Content[];
   groups: Record<string, Group[]>;
   carousel: Special;
@@ -241,7 +243,7 @@ export function ContentEditor({
       <Tabs defaultValue="carousel" className="gap-6">
         <div className="overflow-x-auto pb-1">
           <TabsList className="h-auto w-max flex-nowrap gap-1 bg-cream-100 p-1">
-            {TABS.map((t) => (
+            {TABS.filter((t) => t.id !== "demo" || isDirector).map((t) => (
               <TabsTrigger key={t.id} value={t.id} className="whitespace-nowrap px-4 py-2">
                 {t.label}
               </TabsTrigger>

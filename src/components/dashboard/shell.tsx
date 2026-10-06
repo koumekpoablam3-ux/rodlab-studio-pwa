@@ -6,13 +6,15 @@ import { usePathname } from "next/navigation";
 import { CallProvider } from "@/components/chat/call-provider";
 import { signOut } from "next-auth/react";
 import {
-  LayoutDashboard, Inbox, Users, FolderKanban, FileText, Receipt, MessageSquare,
+  LayoutDashboard,
+  ShieldCheck, Inbox, Users, FolderKanban, FileText, Receipt, MessageSquare,
   LayoutTemplate, UsersRound, CircleUserRound, Menu, LogOut, Bell, ExternalLink, X,
   GraduationCap, Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo, Avatar } from "@/components/brand";
 import { Role, ROLE_LABELS } from "@/lib/roles";
+import { ROUTE_PERMISSIONS } from "@/lib/permissions";
 import { timeAgo } from "@/lib/format";
 import { useEffect, useRef } from "react";
 
@@ -59,6 +61,7 @@ export type ShellUser = {
   role: Role;
   avatarColor?: string | null;
   companyName?: string | null;
+  isDirector?: boolean;
 };
 
 type Notification = {
@@ -177,17 +180,30 @@ export function DashboardShell({
   variant,
   user,
   badges,
+  access,
   children,
 }: {
   variant: "admin" | "client";
   user: ShellUser;
+  access?: { isDirector: boolean; permissions: string[] };
   badges?: { requests?: number; messages?: number };
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const nav = variant === "admin" ? ADMIN_NAV : user.role === "ENTREPRISE" ? ENTREPRISE_NAV : CLIENT_NAV;
+  // Menu admin filtré selon les droits accordés par le directeur ; « Administrateurs » : directeur seul.
+  const adminNav = access
+    ? ADMIN_NAV.filter((item) => {
+        const needed = ROUTE_PERMISSIONS[item.href];
+        return !needed || access.isDirector || access.permissions.includes(needed);
+      }).flatMap((item) =>
+        access.isDirector && item.href === "/admin/profil"
+          ? [{ href: "/admin/administrateurs", label: "Administrateurs", icon: ShieldCheck } as NavItem, item]
+          : [item]
+      )
+    : ADMIN_NAV;
+  const nav = variant === "admin" ? adminNav : user.role === "ENTREPRISE" ? ENTREPRISE_NAV : CLIENT_NAV;
   const displayName = user.role === "ENTREPRISE" && user.companyName ? user.companyName : user.name;
 
   const sidebar = (
@@ -242,7 +258,7 @@ export function DashboardShell({
           <Avatar name={displayName} color={user.avatarColor} size="sm" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-cream-50">{displayName}</p>
-            <p className="truncate text-xs text-forest-200/70">{ROLE_LABELS[user.role]}</p>
+            <p className="truncate text-xs text-forest-200/70">{user.isDirector ? "Directeur" : ROLE_LABELS[user.role]}</p>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/" })}

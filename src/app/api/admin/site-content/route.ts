@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getServerSession } from "next-auth";
+import { requireAdmin } from "@/lib/access";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // Clés autorisées : lettres, chiffres, points, tirets (ex: hero.title, team.members, real.kafo-market.image)
@@ -21,11 +20,6 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
-
   try {
     const body = await req.json();
     const parsed = updateSchema.safeParse(body);
@@ -33,6 +27,11 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Données invalides" }, { status: 400 });
     }
     const { values, resetKeys } = parsed.data;
+
+    // Les réglages « chat.* » (messagerie) sont réservés au directeur ; le reste demande le droit « contenu ».
+    const touchesChat = [...values.map((v) => v.key), ...resetKeys].some((k) => k.startsWith("chat."));
+    const guard = await requireAdmin(touchesChat ? "director" : "content");
+    if (!guard.ok) return guard.response;
 
     await db.$transaction([
       // upsert : fonctionne aussi pour les nouvelles clés (photos, équipe, carrousel…)

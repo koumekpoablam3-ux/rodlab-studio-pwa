@@ -32,14 +32,7 @@ async function runBootstrap() {
     console.log("[bootstrap] Schéma créé (11 tables, 8 index).");
   }
 
-  // 2) Les comptes existent-ils ?
-  const userCount = await db.user.count();
-  if (userCount === 0) {
-    console.log("[bootstrap] Base vide — création automatique des données de démonstration…");
-    await seedDemoData(db);
-  }
-
-  // 3) Mises à jour incrémentales du schéma (colonnes/tables ajoutées après la mise en
+  // 1 bis) Mises à jour incrémentales du schéma (AVANT le seed : le client Prisma attend les colonnes récentes) (colonnes/tables ajoutées après la mise en
   // production initiale — sans effet si déjà appliquées, donc sûr à exécuter à chaque fois).
   try {
     await db.$executeRawUnsafe(`ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "type" TEXT NOT NULL DEFAULT 'TEXT'`);
@@ -50,6 +43,10 @@ async function runBootstrap() {
     await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "active" BOOLEAN NOT NULL DEFAULT true`);
     await db.$executeRawUnsafe(`ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "reminderSentAt" TIMESTAMP(3)`);
     await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lastSeenAt" TIMESTAMP(3)`);
+    await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isDirector" BOOLEAN NOT NULL DEFAULT false`);
+    await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "permissions" TEXT`);
+    await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "invitePending" BOOLEAN NOT NULL DEFAULT false`);
+    await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "invitedById" TEXT`);
     for (const statement of CHAT_STATEMENTS) await db.$executeRawUnsafe(statement);
     await db.$executeRawUnsafe(
       `CREATE TABLE IF NOT EXISTS "SiteImage" ( "id" TEXT NOT NULL PRIMARY KEY, "mime" TEXT NOT NULL, "size" INTEGER NOT NULL, "data" BYTEA NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP )`
@@ -58,11 +55,31 @@ async function runBootstrap() {
     console.error("[bootstrap] Migration incrémentale échouée (non bloquant) :", error);
   }
 
+  // 2) Les comptes existent-ils ?
+  const userCount = await db.user.count();
+  if (userCount === 0) {
+    console.log("[bootstrap] Base vide — création automatique des données de démonstration…");
+    await seedDemoData(db);
+  }
+
   // 3 bis) Anciens fils « client ↔ studio » → conversations de la messagerie v2 (idempotent).
   try {
     await migrateLegacyMessages();
   } catch (error) {
     console.error("[bootstrap] Migration des anciens messages échouée (non bloquant) :", error);
+  }
+
+  // 3 ter) Il doit toujours exister un directeur (compte « directeur@… » en priorité).
+  try {
+    const hasDirector = await db.user.findFirst({ where: { isDirector: true }, select: { id: true } });
+    if (!hasDirector) {
+      const candidate =
+        (await db.user.findFirst({ where: { role: "ADMIN", email: "directeur@rodlabstudio.tg" }, select: { id: true } })) ??
+        (await db.user.findFirst({ where: { role: "ADMIN" }, orderBy: { createdAt: "asc" }, select: { id: true } }));
+      if (candidate) await db.user.update({ where: { id: candidate.id }, data: { isDirector: true } });
+    }
+  } catch (error) {
+    console.error("[bootstrap] Désignation du directeur échouée (non bloquant) :", error);
   }
 
   // 4) Cours ajoutés au catalogue après le seed initial (indépendant de userCount,

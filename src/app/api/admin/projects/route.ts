@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/access";
 import { db } from "@/lib/db";
 import { notifyUser } from "@/lib/push";
 import { serviceTypeLabel } from "@/lib/roles";
@@ -18,10 +17,9 @@ const createSchema = z.object({
 });
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const guard = await requireAdmin("projects");
+  if (!guard.ok) return guard.response;
+  const session = { user: guard.user };
   const projects = await db.project.findMany({
     include: { client: { select: { id: true, name: true, companyName: true, role: true, avatarColor: true } } },
     orderBy: { createdAt: "desc" },
@@ -30,10 +28,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const guard = await requireAdmin("projects");
+  if (!guard.ok) return guard.response;
+  const session = { user: guard.user };
 
   try {
     const body = await req.json();

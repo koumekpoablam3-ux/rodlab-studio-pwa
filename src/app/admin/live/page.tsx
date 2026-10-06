@@ -3,10 +3,12 @@ import { Video } from "lucide-react";
 import { db } from "@/lib/db";
 import { LiveManager } from "@/components/academy/live-manager";
 
+import { requirePermission } from "@/lib/access";
 export const metadata: Metadata = { title: "Sessions live — Administration RodLab" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminLivePage() {
+  await requirePermission("training");
   const sessions = await db.liveSession.findMany({
     orderBy: { startsAt: "desc" },
     include: { _count: { select: { registrations: true } } },

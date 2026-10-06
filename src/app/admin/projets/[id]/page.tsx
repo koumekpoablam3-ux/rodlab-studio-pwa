@@ -2,10 +2,12 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { ProjectEditor } from "./project-editor";
 
+import { requirePermission } from "@/lib/access";
 export const metadata = { title: "Détail projet" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission("projects");
   const { id } = await params;
   const project = await db.project.findUnique({
     where: { id },
