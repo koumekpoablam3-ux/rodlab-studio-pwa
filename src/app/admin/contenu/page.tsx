@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { SERVICES, TEAM, TESTIMONIALS, AGENCY_PHOTOS } from "@/lib/site-data";
 import { REALISATIONS, BLOG_POSTS } from "@/lib/site-data-content";
-import { DEFAULT_CAROUSEL, getOverrides } from "@/lib/site-overrides";
+import { DEFAULT_CAROUSEL, DEFAULT_TEAM_IDS, getOverrides, withTeamIds } from "@/lib/site-overrides";
 import { ContentEditor, type Group } from "./content-editor";
 
 export const metadata = { title: "Contenu du site" };
@@ -14,7 +14,7 @@ export default async function AdminContenuPage() {
   ]);
 
   // Valeur courante = surcharge enregistrée (non vide) sinon valeur par défaut du site.
-  const f = (key: string, label: string, kind: "image" | "text" | "textarea", def: string) => ({
+  const f = (key: string, label: string, kind: "image" | "text" | "textarea" | "toggle", def: string) => ({
     key, label, kind, def, value: o[key]?.trim() ? o[key] : def,
   });
 
@@ -39,6 +39,7 @@ export default async function AdminContenuPage() {
     realisations: REALISATIONS.map((r) => ({
       title: r.title,
       fields: [
+        f(`hide.real.${r.slug}`, "Masquer ce projet sur le site", "toggle", ""),
         f(`real.${r.slug}.image`, "Photo du projet", "image", r.image),
         f(`real.${r.slug}.title`, "Titre", "text", r.title),
         f(`real.${r.slug}.summary`, "Résumé", "textarea", r.summary),
@@ -47,6 +48,7 @@ export default async function AdminContenuPage() {
     blog: BLOG_POSTS.map((p) => ({
       title: p.title,
       fields: [
+        f(`hide.blog.${p.slug}`, "Masquer cet article sur le site", "toggle", ""),
         f(`blog.${p.slug}.cover`, "Photo de couverture", "image", p.cover),
         f(`blog.${p.slug}.title`, "Titre de l'article", "text", p.title),
         f(`blog.${p.slug}.excerpt`, "Extrait", "textarea", p.excerpt),
@@ -55,6 +57,7 @@ export default async function AdminContenuPage() {
     testimonials: TESTIMONIALS.map((t, i) => ({
       title: `${t.name} — ${t.role}`,
       fields: [
+        f(`hide.testimonial.${i}`, "Masquer ce témoignage sur le site", "toggle", ""),
         f(`testimonial.${i}.photo`, "Portrait", "image", t.photo),
         f(`testimonial.${i}.name`, "Nom", "text", t.name),
         f(`testimonial.${i}.role`, "Fonction", "text", t.role),
@@ -64,7 +67,19 @@ export default async function AdminContenuPage() {
   };
 
   const carouselDefault = JSON.stringify(DEFAULT_CAROUSEL);
-  const teamDefault = JSON.stringify(TEAM.map((m) => ({ name: m.name, role: m.role, bio: m.bio, photo: m.photo })));
+  const teamDefault = JSON.stringify(TEAM.map((m, i) => ({ id: DEFAULT_TEAM_IDS[i], name: m.name, role: m.role, bio: m.bio, photo: m.photo })));
+  // Équipe déjà enregistrée avant l'ajout des identifiants : on les rattache par position.
+  let teamValue = teamDefault;
+  if (o["team.members"]?.trim()) {
+    try {
+      const parsed = JSON.parse(o["team.members"]);
+      teamValue = Array.isArray(parsed)
+        ? JSON.stringify(withTeamIds(parsed).map((m: any) => ({ id: m.id, name: m.name ?? "", role: m.role ?? "", bio: m.bio ?? "", photo: m.photo ?? "" })))
+        : teamDefault;
+    } catch {
+      teamValue = teamDefault;
+    }
+  }
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -72,7 +87,7 @@ export default async function AdminContenuPage() {
         initialContents={contents}
         groups={groups}
         carousel={{ key: "carousel.slides", def: carouselDefault, value: o["carousel.slides"]?.trim() ? o["carousel.slides"] : carouselDefault }}
-        team={{ key: "team.members", def: teamDefault, value: o["team.members"]?.trim() ? o["team.members"] : teamDefault }}
+        team={{ key: "team.members", def: teamDefault, value: teamValue }}
       />
     </div>
   );

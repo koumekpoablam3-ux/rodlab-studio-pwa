@@ -8,16 +8,17 @@ import { PageHeader } from "@/components/shared";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageField } from "./image-field";
 import { uploadImage } from "./upload-image";
 
 type Content = { id: string; key: string; section: string; label: string; value: string; type: string };
-type Field = { key: string; label: string; kind: "image" | "text" | "textarea"; def: string; value: string };
+type Field = { key: string; label: string; kind: "image" | "text" | "textarea" | "toggle"; def: string; value: string };
 export type Group = { title: string; hint?: string; fields: Field[] };
 type Special = { key: string; def: string; value: string };
 type Slide = { src: string; alt: string };
-type Member = { name: string; role: string; bio: string; photo: string };
+type Member = { id?: string; name: string; role: string; bio: string; photo: string };
 
 const SECTION_LABELS: Record<string, string> = {
   hero: "Section d'accueil (Hero)",
@@ -35,6 +36,7 @@ const TABS = [
   { id: "realisations", label: "Réalisations" },
   { id: "blog", label: "Blog" },
   { id: "testimonials", label: "Témoignages" },
+  { id: "demo", label: "Données de démo" },
 ] as const;
 
 function parse<T>(raw: string, fallback: T[]): T[] {
@@ -64,6 +66,7 @@ export function ContentEditor({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [uploadingSlides, setUploadingSlides] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const slideInput = useRef<HTMLInputElement>(null);
 
   // Valeurs de départ et valeurs par défaut (seules les clés « résettables » ont un défaut).
@@ -116,6 +119,20 @@ export function ContentEditor({
     if (slideInput.current) slideInput.current.value = "";
   }
 
+  async function cleanDemo() {
+    if (!window.confirm("Supprimer définitivement les comptes clients de démonstration et toutes leurs données (projets, devis, factures, messages) ?\n\nCette action est irréversible.")) return;
+    setCleaning(true);
+    const res = await fetch("/api/admin/demo-cleanup", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    setCleaning(false);
+    if (!res.ok) {
+      toast.error(data.error ?? "Échec de la suppression");
+      return;
+    }
+    toast.success(`Supprimé : ${data.users} compte(s) de démo et ${data.requests} demande(s) de devis de démo`);
+    router.refresh();
+  }
+
   async function save() {
     if (changedKeys.length === 0) {
       toast.info("Aucune modification à enregistrer");
@@ -143,6 +160,20 @@ export function ContentEditor({
 
   function renderField(f: Field) {
     const edited = vals[f.key] !== f.def;
+    if (f.kind === "toggle") {
+      const hidden = vals[f.key] === "1";
+      return (
+        <label key={f.key} className="flex items-center justify-between gap-3 rounded-2xl border border-cream-300 bg-white px-4 py-3 md:col-span-2">
+          <span className="text-sm font-medium text-ink-700">
+            {f.label}
+            <span className="block text-xs font-normal text-ink-400">
+              {hidden ? "Actuellement masqué : les visiteurs ne le voient plus." : "Actuellement visible sur le site."}
+            </span>
+          </span>
+          <Switch checked={hidden} onCheckedChange={(on) => set(f.key, on ? "1" : "")} aria-label={f.label} />
+        </label>
+      );
+    }
     if (f.kind === "image") {
       return (
         <ImageField
@@ -345,6 +376,38 @@ export function ContentEditor({
                 );
               })}
             </div>
+          </section>
+        </TabsContent>
+
+        {/* ———— Données de démonstration ———— */}
+        <TabsContent value="demo" className="space-y-4">
+          <section className={card}>
+            <h2 className="font-display text-lg font-semibold text-ink-900">Données de démonstration</h2>
+            <p className="mt-1 text-sm text-ink-500">
+              Le projet est livré avec des clients, projets, devis, factures, messages et demandes fictifs.
+              Vous pouvez les supprimer en une fois ici, ou un par un depuis chaque section (Clients, Projets, Devis, Factures, Demandes).
+            </p>
+            <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-ink-600">
+              <li>Comptes clients de démo : kossi@chezkossi.tg, ayaba@adjale-boutique.tg, contact@hotelpalma.tg, comptabilite@hotelpalma.tg</li>
+              <li>Avec eux, leurs projets, devis, factures, messages et collaborateurs</li>
+              <li>Les 5 demandes de devis de démo</li>
+            </ul>
+            <p className="mt-4 rounded-2xl border border-gold-300 bg-gold-50 px-4 py-3 text-sm text-ink-700">
+              Vos comptes administrateur ne sont <strong>jamais</strong> supprimés par ce bouton. Pensez à changer le mot de passe
+              des comptes <span className="font-mono">admin@rodlabstudio.tg</span> et <span className="font-mono">directeur@rodlabstudio.tg</span> (mot de passe de démo connu : <span className="font-mono">demo1234</span>) depuis « Mon profil » ou « Équipe &amp; comptes ».
+            </p>
+            <button
+              type="button"
+              onClick={cleanDemo}
+              disabled={cleaning}
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+            >
+              {cleaning ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
+              Supprimer les données de démo
+            </button>
+            <p className="mt-3 text-xs text-ink-400">
+              Les réalisations, articles et témoignages d&apos;exemple du site public se masquent depuis les onglets « Réalisations », « Blog » et « Témoignages » (interrupteur « Masquer »).
+            </p>
           </section>
         </TabsContent>
 

@@ -17,6 +17,7 @@ const VALUE_ICONS = { eye: Eye, award: Award, handshake: Handshake, trending: Tr
 
 export default async function AProposPage() {
   const [TEAM, TESTIMONIALS, AGENCY_PHOTOS] = await Promise.all([getTeam(), getTestimonials(), getAgencyPhotos()]);
+  const FEATURED_T = TESTIMONIALS.find((t) => t.idx === 1) ?? TESTIMONIALS[0] ?? null;
   return (
     <>
       <PageHero
@@ -188,6 +189,7 @@ export default async function AProposPage() {
               </div>
             ))}
           </div>
+          {FEATURED_T && (
           <div className="flex flex-col justify-center rounded-3xl border border-forest-700/60 bg-forest-800/70 p-8 backdrop-blur-sm">
             <div className="flex gap-1" aria-label="Note : 5 sur 5">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -195,22 +197,23 @@ export default async function AProposPage() {
               ))}
             </div>
             <blockquote className="mt-4 font-display text-lg leading-relaxed text-cream-50">
-              « {TESTIMONIALS[1].quote} »
+              « {FEATURED_T!.quote} »
             </blockquote>
             <div className="mt-4 flex items-center gap-3">
               <Image
-                src={TESTIMONIALS[1].photo}
-                alt={`Portrait de ${TESTIMONIALS[1].name}`}
+                src={FEATURED_T!.photo}
+                alt={`Portrait de ${FEATURED_T!.name}`}
                 width={44}
                 height={44}
                 className="h-11 w-11 rounded-full border-2 border-forest-700 object-cover"
               />
               <div>
-                <p className="text-sm font-semibold text-gold-400">{TESTIMONIALS[1].name}</p>
-                <p className="text-xs text-forest-100/60">{TESTIMONIALS[1].role}</p>
+                <p className="text-sm font-semibold text-gold-400">{FEATURED_T!.name}</p>
+                <p className="text-xs text-forest-100/60">{FEATURED_T!.role}</p>
               </div>
             </div>
           </div>
+          )}
         </div>
       </section>
 

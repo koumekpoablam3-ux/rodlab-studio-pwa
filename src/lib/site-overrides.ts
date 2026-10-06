@@ -21,7 +21,19 @@ import { AGENCY_PHOTOS, SERVICES, TEAM, TESTIMONIALS, IMG } from "@/lib/site-dat
 import { REALISATIONS, BLOG_POSTS } from "@/lib/site-data-content";
 
 export type CarouselSlide = { src: string; alt: string };
-export type TeamMemberData = { name: string; role: string; bio: string; photo: string; initials: string; color: string };
+export type TeamMemberData = { id?: string; name: string; role: string; bio: string; photo: string; initials: string; color: string };
+
+/** Identifiants stables des 4 membres d'origine (pour relier les auteurs du blog même si l'ordre change). */
+export const DEFAULT_TEAM_IDS = ["rodrigue", "afi", "komlan", "kekeli"];
+
+/** Anciennes données sans identifiant : on rattache les membres d'origine par leur position. */
+export function withTeamIds<T extends { id?: string }>(list: T[]): T[] {
+  if (list.some((m) => m?.id)) return list;
+  return list.map((m, i) => (i < DEFAULT_TEAM_IDS.length ? { ...m, id: DEFAULT_TEAM_IDS[i] } : m));
+}
+
+/** Masqué depuis l'admin ? (clé « hide.* » à "1") */
+const isHidden = (o: Record<string, string>, key: string) => o[`hide.${key}`] === "1";
 
 const TEAM_COLORS = ["#bd4f2b", "#102a20", "#b98a2f", "#7a4a1f"];
 
@@ -81,9 +93,10 @@ export async function getTeam(): Promise<TeamMemberData[]> {
   const o = await getOverrides();
   const list = parseList<Partial<TeamMemberData>>(o["team.members"]);
   if (list && list.length > 0) {
-    return list
+    return withTeamIds(list)
       .filter((m) => str(m?.name).trim() !== "")
       .map((m, i) => ({
+        id: m.id,
         name: str(m.name),
         role: str(m.role),
         bio: str(m.bio),
@@ -92,7 +105,7 @@ export async function getTeam(): Promise<TeamMemberData[]> {
         color: TEAM_COLORS[i % TEAM_COLORS.length],
       }));
   }
-  return TEAM.map((m) => ({ name: m.name, role: m.role, bio: m.bio, photo: m.photo, initials: m.initials, color: m.color }));
+  return TEAM.map((m, i) => ({ id: DEFAULT_TEAM_IDS[i], name: m.name, role: m.role, bio: m.bio, photo: m.photo, initials: m.initials, color: m.color }));
 }
 
 export async function getAgencyPhotos() {
@@ -115,12 +128,13 @@ export async function getTestimonials() {
   const o = await getOverrides();
   return TESTIMONIALS.map((t, i) => ({
     ...t,
+    idx: i,
     photo: pick(o, `testimonial.${i}.photo`, t.photo),
     name: pick(o, `testimonial.${i}.name`, t.name),
     role: pick(o, `testimonial.${i}.role`, t.role),
     quote: pick(o, `testimonial.${i}.quote`, t.quote),
     initials: initialsOf(pick(o, `testimonial.${i}.name`, t.name)),
-  }));
+  })).filter((t) => !isHidden(o, `testimonial.${t.idx}`));
 }
 
 export async function getRealisations() {
@@ -130,19 +144,25 @@ export async function getRealisations() {
     image: pick(o, `real.${r.slug}.image`, r.image),
     title: pick(o, `real.${r.slug}.title`, r.title),
     summary: pick(o, `real.${r.slug}.summary`, r.summary),
-  }));
+  })).filter((r) => !isHidden(o, `real.${r.slug}`));
 }
 
 export async function getBlogPosts() {
   const o = await getOverrides();
   const team = await getTeam();
-  const founderPhoto = team[0]?.photo;
-  return BLOG_POSTS.map((p) => ({
-    ...p,
-    cover: pick(o, `blog.${p.slug}.cover`, p.cover),
-    title: pick(o, `blog.${p.slug}.title`, p.title),
-    excerpt: pick(o, `blog.${p.slug}.excerpt`, p.excerpt),
-    // L'auteur « fondateur » suit automatiquement la photo du premier membre de l'équipe.
-    author: p.author.initials === "KR" && founderPhoto ? { ...p.author, photo: founderPhoto } : p.author,
-  }));
+  return BLOG_POSTS.map((p) => {
+    // L'auteur d'un article suit le membre d'équipe correspondant (nom d'origine → identifiant stable).
+    const defaultIdx = TEAM.findIndex((m) => m.name === p.author.name);
+    const member = defaultIdx >= 0 ? team.find((m) => m.id === DEFAULT_TEAM_IDS[defaultIdx]) : undefined;
+    const author = member
+      ? { name: member.name, role: member.role, initials: member.initials, photo: member.photo || p.author.photo }
+      : p.author;
+    return {
+      ...p,
+      cover: pick(o, `blog.${p.slug}.cover`, p.cover),
+      title: pick(o, `blog.${p.slug}.title`, p.title),
+      excerpt: pick(o, `blog.${p.slug}.excerpt`, p.excerpt),
+      author,
+    };
+  }).filter((p) => !isHidden(o, `blog.${p.slug}`));
 }

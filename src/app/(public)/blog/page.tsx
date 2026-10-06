@@ -15,6 +15,16 @@ export const metadata = {
 export default async function BlogPage() {
   const BLOG_POSTS = await getBlogPosts();
   const [featured, ...rest] = BLOG_POSTS;
+  if (!featured) {
+    return (
+      <PageHero
+        eyebrow="Blog"
+        title="Nos articles arrivent bientôt."
+        description="Revenez très vite : de nouveaux conseils pour votre présence en ligne sont en préparation."
+        breadcrumbs={[{ label: "Blog" }]}
+      />
+    );
+  }
 
   return (
     <>

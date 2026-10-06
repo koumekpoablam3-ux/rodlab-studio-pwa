@@ -452,6 +452,7 @@ export default async function HomePage() {
       </section>
 
       {/* ————— AVIS ————— */}
+      {TESTIMONIALS.length > 0 && (
       <section className="woven-pattern border-y border-cream-300 bg-cream-50 py-20" aria-labelledby="avis-title">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
@@ -488,7 +489,7 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </section>)}
 
       {/* ————— BLOG (aperçu) ————— */}
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8" aria-labelledby="blog-title">
