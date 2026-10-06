@@ -1,12 +1,15 @@
-import nextCoreWebVitals from "eslint-config-next/core-web-vitals.js";
-import nextTypescript from "eslint-config-next/typescript.js";
+import { FlatCompat } from "@eslint/eslintrc";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
+// eslint-config-next v15 expose des configs « legacy » (non-tableaux) : on les
+// convertit avec FlatCompat au lieu de les décomposer (« nextCoreWebVitals is not iterable »).
+const compat = new FlatCompat({ baseDirectory: __dirname });
+
+const eslintConfig = [...compat.extends("next/core-web-vitals", "next/typescript"), {
   rules: {
     // TypeScript rules
     "@typescript-eslint/no-explicit-any": "off",
@@ -18,11 +21,9 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     
     // React rules
     "react-hooks/exhaustive-deps": "off",
-    "react-hooks/purity": "off",
     "react/no-unescaped-entities": "off",
     "react/display-name": "off",
     "react/prop-types": "off",
-    "react-compiler/react-compiler": "off",
     
     // Next.js rules
     "@next/next/no-img-element": "off",

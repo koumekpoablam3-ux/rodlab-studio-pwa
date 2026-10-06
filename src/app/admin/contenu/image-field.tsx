@@ -49,7 +49,6 @@ export function ImageField({
         className={`relative overflow-hidden rounded-2xl border bg-cream-100 ${aspect} ${over ? "border-terra-600 ring-2 ring-terra-600/30" : "border-cream-300"}`}
       >
         {value ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={value} alt="" className="h-full w-full object-cover object-top" />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-ink-300">Aucune photo</div>
