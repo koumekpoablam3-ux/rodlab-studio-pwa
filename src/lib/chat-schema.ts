@@ -17,6 +17,8 @@ export const CHAT_STATEMENTS: string[] = [
   `CREATE TABLE IF NOT EXISTS "CallSession" ( "id" TEXT NOT NULL PRIMARY KEY, "conversationId" TEXT NOT NULL, "callerId" TEXT NOT NULL, "calleeId" TEXT NOT NULL, "kind" TEXT NOT NULL, "status" TEXT NOT NULL DEFAULT 'RINGING', "callerPingAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "calleePingAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "answeredAt" TIMESTAMP(3), "endedAt" TIMESTAMP(3) )`,
   `CREATE INDEX IF NOT EXISTS "CallSession_calleeId_status_idx" ON "CallSession"("calleeId", "status")`,
   `CREATE INDEX IF NOT EXISTS "CallSession_callerId_status_idx" ON "CallSession"("callerId", "status")`,
+  `CREATE TABLE IF NOT EXISTS "CallParticipant" ( "callId" TEXT NOT NULL, "userId" TEXT NOT NULL, "status" TEXT NOT NULL DEFAULT 'INVITED', "invitedById" TEXT NOT NULL, "invitedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "joinedAt" TIMESTAMP(3), "pingAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY ("callId", "userId") )`,
+  `CREATE INDEX IF NOT EXISTS "CallParticipant_userId_status_idx" ON "CallParticipant"("userId", "status")`,
   `CREATE TABLE IF NOT EXISTS "CallSignal" ( "id" TEXT NOT NULL PRIMARY KEY, "callId" TEXT NOT NULL, "fromId" TEXT NOT NULL, "toId" TEXT NOT NULL, "type" TEXT NOT NULL, "payload" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP )`,
   `CREATE INDEX IF NOT EXISTS "CallSignal_toId_callId_createdAt_idx" ON "CallSignal"("toId", "callId", "createdAt")`,
 ];

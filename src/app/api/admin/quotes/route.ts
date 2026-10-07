@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       await notifyUser(clientId, {
         title: "Nouveau devis reçu",
         body: `Devis ${number} « ${title} » — ${new Intl.NumberFormat("fr-FR").format(totals.total)} FCFA. Valable jusqu'au ${formatDate(validUntil ? new Date(validUntil) : null)}.`,
-        url: `/dashboard/devis/${quote.id}`,
+        url: `/dashboard/devis`,
         tag: "quote",
       });
     }

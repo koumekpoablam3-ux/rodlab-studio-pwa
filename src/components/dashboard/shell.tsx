@@ -274,7 +274,7 @@ export function DashboardShell({
   );
 
   return (
-    <CallProvider>
+    <CallProvider myId={user.id}>
     <div className="flex min-h-screen bg-cream-100">
       {/* Sidebar desktop */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">{sidebar}</aside>

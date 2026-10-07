@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/access";
 import { AdminsBoard } from "./admins-board";
+import { EmailCheck } from "./email-check";
 
 export const metadata = { title: "Administrateurs" };
 export const dynamic = "force-dynamic";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function AdministrateursPage() {
   const me = await requirePermission("director");
 
+  const myEmail = (await db.user.findUnique({ where: { id: me.id }, select: { email: true } }))?.email ?? "";
   const admins = await db.user.findMany({
     where: { role: "ADMIN" },
     select: {
@@ -28,6 +30,7 @@ export default async function AdministrateursPage() {
           createdAt: a.createdAt.toISOString(),
         }))}
       />
+      <EmailCheck defaultEmail={myEmail} />
     </div>
   );
 }

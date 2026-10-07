@@ -16,7 +16,19 @@
 
 import nodemailer from "nodemailer";
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://rodlab-studio-pwa.vercel.app").replace(/\/$/, "");
+/**
+ * Adresse publique du site pour les liens des emails. Ordre : NEXT_PUBLIC_SITE_URL (si ce n'est pas
+ * localhost), puis le domaine de production fourni automatiquement par Vercel, puis l'adresse du
+ * déploiement en cours. Évite des liens vers un mauvais site (« page introuvable »).
+ */
+function resolveSiteUrl() {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicit && !/localhost|127\.0\.0\.1/.test(explicit)) return explicit.replace(/\/$/, "");
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return (explicit || "https://rodlab-studio-pwa.vercel.app").replace(/\/$/, "");
+}
+const SITE_URL = resolveSiteUrl();
 
 /** URL de base du site, réutilisée par les routes API (liens de réinitialisation…). */
 export const EMAIL_SITE_URL = SITE_URL;
@@ -34,14 +46,30 @@ function isConfigured() {
 
 function getTransporter() {
   if (transporter) return transporter;
+  const port = Number(process.env.SMTP_PORT || 465);
+  // 465 = TLS direct ; 587 = STARTTLS (Brevo, Mailjet, SendGrid, Resend…). Forçable avec SMTP_SECURE=true|false.
+  const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : port === 465;
   transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: true, // port 465 = connexion chiffrée directe (recommandé avec Gmail)
+    port,
+    secure,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    // Signature DKIM faite par l'application (uniquement si votre fournisseur SMTP ne signe pas déjà pour votre domaine)
+    ...(process.env.DKIM_PRIVATE_KEY && process.env.DKIM_DOMAIN
+      ? {
+          dkim: {
+            domainName: process.env.DKIM_DOMAIN,
+            keySelector: process.env.DKIM_SELECTOR || "default",
+            privateKey: process.env.DKIM_PRIVATE_KEY.replace(/\\n/g, "\n"),
+          },
+        }
+      : {}),
   });
   return transporter;
 }
@@ -57,9 +85,15 @@ function escapeHtml(text: string) {
 function buildHtml(title: string, body: string, url?: string, ctaLabel?: string) {
   const ctaUrl = url ? (url.startsWith("http") ? url : `${SITE_URL}${url}`) : null;
   const ctaText = escapeHtml(ctaLabel || "Voir dans mon espace client");
+  const bodyHtml = body
+    .split(/\n{2,}/)
+    .map((para) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3a3530;">${escapeHtml(para).replace(/\n/g, "<br>")}</p>`)
+    .join("\n            ");
+  const preheader = escapeHtml(body.replace(/\s+/g, " ").slice(0, 110));
   return `<!doctype html>
 <html lang="fr">
   <body style="margin:0;padding:0;background:#f3efe6;font-family:Georgia,'Times New Roman',serif;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${preheader}</div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3efe6;padding:32px 16px;">
       <tr><td align="center">
         <table role="presentation" width="100%" style="max-width:480px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5ddc9;">
@@ -68,7 +102,7 @@ function buildHtml(title: string, body: string, url?: string, ctaLabel?: string)
           </td></tr>
           <tr><td style="padding:28px 28px 8px;">
             <h1 style="margin:0 0 12px;font-size:20px;color:#1c3829;">${escapeHtml(title)}</h1>
-            <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3a3530;">${escapeHtml(body)}</p>
+            ${bodyHtml}
             ${
               ctaUrl
                 ? `<a href="${ctaUrl}" style="display:inline-block;background:#bd4f2b;color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:10px;font-size:14px;font-weight:bold;">${ctaText}</a>`
@@ -76,13 +110,49 @@ function buildHtml(title: string, body: string, url?: string, ctaLabel?: string)
             }
           </td></tr>
           <tr><td style="padding:20px 28px 28px;border-top:1px solid #efe9d8;">
-            <p style="margin:0;font-size:12px;color:#9a9184;">RodLab Studio · Lomé, Togo — ${SITE_URL.replace(/^https?:\/\//, "")}</p>
+            <p style="margin:0 0 6px;font-size:12px;color:#9a9184;">RodLab Studio · Lomé, Togo — ${SITE_URL.replace(/^https?:\/\//, "")}</p>
+            <p style="margin:0;font-size:11px;line-height:1.5;color:#b0a899;">Vous recevez ce message car il concerne un compte ou une demande liée à cette adresse email sur RodLab Studio. Une question ? Répondez simplement à cet email ou appelez le +228 70 08 86 68.</p>
           </td></tr>
         </table>
       </td></tr>
     </table>
   </body>
 </html>`;
+}
+
+/** Version texte brut : un email 100 % HTML sans équivalent texte est un signal de spam classique. */
+function buildText(title: string, body: string, url?: string, ctaLabel?: string) {
+  const ctaUrl = url ? (url.startsWith("http") ? url : `${SITE_URL}${url}`) : null;
+  return [
+    title,
+    "",
+    body,
+    ...(ctaUrl ? ["", `${ctaLabel || "Voir dans mon espace client"} : ${ctaUrl}`] : []),
+    "",
+    "—",
+    `RodLab Studio · Lomé, Togo — ${SITE_URL.replace(/^https?:\/\//, "")}`,
+    "Vous recevez ce message car il concerne un compte ou une demande liée à cette adresse email.",
+    "Une question ? Répondez à cet email ou appelez le +228 70 08 86 68.",
+  ].join("\n");
+}
+
+/** Adresse d'expéditeur : EMAIL_FROM (« Nom <adresse> ») ou, à défaut, SMTP_USER. */
+export function senderAddress() {
+  return process.env.EMAIL_FROM || process.env.SMTP_USER || "";
+}
+
+async function deliver(to: string, subject: string, body: string, url?: string, ctaLabel?: string) {
+  const from = senderAddress();
+  await getTransporter().sendMail({
+    from,
+    to,
+    // Les réponses arrivent dans la vraie boîte de l'agence (adresse « répondre à » configurable)
+    replyTo: process.env.EMAIL_REPLY_TO || from,
+    subject,
+    text: buildText(subject, body, url, ctaLabel),
+    html: buildHtml(subject, body, url, ctaLabel),
+    headers: { "X-Auto-Response-Suppress": "OOF, AutoReply", "X-Mailer": "RodLab Studio" },
+  });
 }
 
 /**
@@ -98,12 +168,7 @@ export async function sendEmail(to: string, subject: string, body: string, url?:
   if (!to) return;
 
   try {
-    await getTransporter().sendMail({
-      from: process.env.EMAIL_FROM || process.env.SMTP_USER,
-      to,
-      subject,
-      html: buildHtml(subject, body, url, ctaLabel),
-    });
+    await deliver(to, subject, body, url, ctaLabel);
   } catch (error) {
     console.error("[email] Erreur d'envoi:", error);
   }
@@ -118,12 +183,7 @@ export async function sendEmailStrict(
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   if (!isConfigured()) return { ok: false, reason: "L'envoi d'emails n'est pas configuré sur le serveur (variables SMTP_USER et SMTP_PASS)." };
   try {
-    await getTransporter().sendMail({
-      from: process.env.EMAIL_FROM || process.env.SMTP_USER,
-      to,
-      subject,
-      html: buildHtml(subject, body, url, ctaLabel),
-    });
+    await deliver(to, subject, body, url, ctaLabel);
     return { ok: true };
   } catch (error) {
     console.error("[email] Erreur d'envoi:", error);
@@ -147,4 +207,16 @@ Votre espace client est prêt : suivez l'avancement de vos projets en temps rée
 Besoin d'un coup de main ? Répondez simplement à cet email ou appelez-nous au +228 70 08 86 68 — nous répondons sous 24 h ouvrées. Encore bienvenue, et bon découverte !`;
 
   await sendEmail(to, "Bienvenue chez RodLab Studio — votre espace client est prêt", body, "/dashboard", "Accéder à mon espace");
+}
+
+
+/** Vérifie la connexion au serveur SMTP (identifiants, port, TLS) — sans envoyer d'email. */
+export async function verifySmtp(): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!isConfigured()) return { ok: false, reason: "SMTP_USER / SMTP_PASS non définis" };
+  try {
+    await getTransporter().verify();
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, reason: error instanceof Error ? error.message.slice(0, 200) : String(error) };
+  }
 }

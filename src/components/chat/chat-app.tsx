@@ -154,7 +154,9 @@ export function ChatApp({
     setMessages((prev) => {
       const base = full ? [] : prev;
       const seen = new Set(base.map((m) => m.id));
-      const merged = [...base, ...(data.messages as Msg[]).filter((m) => !seen.has(m.id))];
+      const fresh = (data.messages as Msg[]).filter((m) => !seen.has(m.id));
+      if (!full && fresh.length === 0) return prev;
+      const merged = [...base, ...fresh];
       lastCreated.current = merged.length ? merged[merged.length - 1].createdAt : null;
       return merged;
     });
@@ -170,9 +172,14 @@ export function ChatApp({
     return () => clearInterval(t);
   }, [activeId, loadMessages, loadConversations]);
 
+  // Descend dans la liste de messages (jamais dans la page entière), uniquement quand un nouveau message
+  // arrive ou qu'on ouvre la conversation — et seulement si l'on était déjà en bas.
+  const lastMessageId = messages.length ? messages[messages.length - 1].id : null;
+  const someoneTyping = typing.length > 0;
   useEffect(() => {
-    if (stickToBottom.current) endRef.current?.scrollIntoView({ block: "end" });
-  }, [messages, typing]);
+    const el = scroller.current;
+    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
+  }, [lastMessageId, someoneTyping]);
 
   // ───── Ouvrir une conversation avec n'importe qui (sans attendre qu'il écrive) ─────
   async function openWith(userId: string) {
@@ -319,7 +326,7 @@ export function ChatApp({
   const isGroup = others.length > 1;
 
   return (
-    <div className="flex h-[calc(100dvh-11rem)] min-h-[520px] overflow-hidden rounded-3xl border border-cream-300 bg-white shadow-card">
+    <div className="flex h-[calc(100dvh-16rem)] min-h-[440px] overflow-hidden lg:h-[calc(100dvh-18.5rem)] rounded-3xl border border-cream-300 bg-white shadow-card">
       {/* ═════════ Colonne gauche ═════════ */}
       <aside className={cn("flex w-full shrink-0 flex-col border-r border-cream-300 md:w-80 lg:w-96", mobileChat ? "hidden md:flex" : "flex")}>
         <div className="space-y-3 border-b border-cream-300 p-4">

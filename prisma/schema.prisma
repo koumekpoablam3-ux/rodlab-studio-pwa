@@ -507,3 +507,17 @@ model CallSignal {
 
   @@index([toId, callId, createdAt])
 }
+
+/// Participants d'un appel (1-à-1 ou de groupe) — chacun se connecte à chacun (maillage WebRTC).
+model CallParticipant {
+  callId      String
+  userId      String
+  status      String    @default("INVITED") // INVITED | JOINED | DECLINED | LEFT | MISSED
+  invitedById String
+  invitedAt   DateTime  @default(now())
+  joinedAt    DateTime?
+  pingAt      DateTime  @default(now())
+
+  @@id([callId, userId])
+  @@index([userId, status])
+}

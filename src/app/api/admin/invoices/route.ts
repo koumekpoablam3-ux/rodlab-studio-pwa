@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         body: `Facture ${number} — ${new Intl.NumberFormat("fr-FR").format(invoice.total)} FCFA${
           invoice.dueDate ? ` à régler avant le ${formatDate(invoice.dueDate)}` : ""
         }.`,
-        url: `/dashboard/factures/${invoice.id}`,
+        url: `/dashboard/factures`,
         tag: "invoice",
       });
     }

@@ -37,6 +37,7 @@ export async function POST() {
     ]);
     // Conversations laissées sans aucun membre par la suppression des comptes de démo
     await db.conversation.deleteMany({ where: { members: { none: {} } } }).catch(() => {});
+    await db.callParticipant.deleteMany({ where: { userId: { notIn: (await db.user.findMany({ select: { id: true } })).map((u) => u.id) } } }).catch(() => {});
     return NextResponse.json({ ok: true, users: users.count, requests: requests.count });
   } catch (error) {
     console.error("DEMO_CLEANUP_ERROR", error);

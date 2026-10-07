@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await notifyUser(quote.clientId, {
       title: "Nouveau devis reçu",
       body: `Devis ${quote.number} « ${quote.title} » — ${new Intl.NumberFormat("fr-FR").format(quote.total)} FCFA.`,
-      url: `/dashboard/devis/${id}`,
+      url: `/dashboard/devis`,
       tag: "quote",
     });
   }

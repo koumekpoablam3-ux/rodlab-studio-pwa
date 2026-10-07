@@ -36,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await notifyUser(invoice.clientId, {
         title: "Paiement confirmé",
         body: `Votre facture ${invoice.number} a été marquée comme payée. Merci !`,
-        url: `/dashboard/factures/${id}`,
+        url: `/dashboard/factures`,
         tag: "invoice",
       });
     }
