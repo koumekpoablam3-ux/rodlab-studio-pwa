@@ -19,6 +19,7 @@ import { cache } from "react";
 import { db } from "@/lib/db";
 import { AGENCY_PHOTOS, SERVICES, TEAM, TESTIMONIALS, IMG } from "@/lib/site-data";
 import { REALISATIONS, BLOG_POSTS } from "@/lib/site-data-content";
+import { REALISATIONS_SEEDED_KEY, toPublic, type PublicRealisation } from "@/lib/realisations";
 
 export type CarouselSlide = { src: string; alt: string };
 export type TeamMemberData = { id?: string; name: string; role: string; bio: string; photo: string; initials: string; color: string };
@@ -137,13 +138,40 @@ export async function getTestimonials() {
   })).filter((t) => !isHidden(o, `testimonial.${t.idx}`));
 }
 
-export async function getRealisations() {
+export async function getRealisations(): Promise<PublicRealisation[]> {
   const o = await getOverrides();
+
+  // Cas normal : les réalisations sont en base (importées au premier chargement, puis gérées par le directeur).
+  if (o[REALISATIONS_SEEDED_KEY] === "1") {
+    try {
+      const rows = await db.realisation.findMany({ where: { published: true }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
+      return rows.map(toPublic);
+    } catch (error) {
+      console.error("REALISATIONS_READ_ERROR", error);
+    }
+  }
+
+  // Avant le premier import (ou base indisponible) : exemples d'origine du code.
   return REALISATIONS.map((r) => ({
-    ...r,
-    image: pick(o, `real.${r.slug}.image`, r.image),
+    id: r.slug,
+    slug: r.slug,
     title: pick(o, `real.${r.slug}.title`, r.title),
+    category: r.category as string,
+    categoryLabel: r.categoryLabel,
+    client: r.client,
+    year: r.year,
+    duration: r.duration,
     summary: pick(o, `real.${r.slug}.summary`, r.summary),
+    challenge: r.challenge,
+    solution: r.solution,
+    image: pick(o, `real.${r.slug}.image`, r.image),
+    gallery: [] as string[],
+    liveUrl: null as string | null,
+    results: r.results as { value: string; label: string }[],
+    features: r.features as string[],
+    tags: r.tags as string[],
+    testimonial: r.testimonial as { quote: string; name: string; role: string } | null,
+    accent: r.accent as "terra" | "forest" | "gold",
   })).filter((r) => !isHidden(o, `real.${r.slug}`));
 }
 

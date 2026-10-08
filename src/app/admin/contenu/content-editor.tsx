@@ -33,7 +33,6 @@ const TABS = [
   { id: "team", label: "Équipe" },
   { id: "agency", label: "Photos de l'agence" },
   { id: "services", label: "Services" },
-  { id: "realisations", label: "Réalisations" },
   { id: "blog", label: "Blog" },
   { id: "testimonials", label: "Témoignages" },
   { id: "demo", label: "Données de démo" },
@@ -414,7 +413,7 @@ export function ContentEditor({
         </TabsContent>
 
         {/* ———— Autres onglets générés depuis le registre ———— */}
-        {(["agency", "services", "realisations", "blog", "testimonials"] as const).map((tab) => (
+        {(["agency", "services", "blog", "testimonials"] as const).map((tab) => (
           <TabsContent key={tab} value={tab} className="space-y-6">
             {(groups[tab] ?? []).map((g) => (
               <section key={g.title} className={card}>

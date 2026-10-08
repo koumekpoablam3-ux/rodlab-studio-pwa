@@ -1,9 +1,11 @@
 import type { MetadataRoute } from "next";
 import { SERVICES } from "@/lib/site-data";
-import { REALISATIONS, BLOG_POSTS } from "@/lib/site-data-content";
+import { BLOG_POSTS } from "@/lib/site-data-content";
+import { getRealisations } from "@/lib/site-overrides";
 import { ACADEMY_COURSES } from "@/lib/academy";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const REALISATIONS = await getRealisations();
   const base = process.env.NEXT_PUBLIC_SITE_URL || "https://rodlab-studio-pwa.vercel.app";
   const now = new Date();
 

@@ -521,3 +521,33 @@ model CallParticipant {
   @@id([callId, userId])
   @@index([userId, status])
 }
+
+/// Réalisations (portfolio) gérées par le directeur / les admins ayant le droit « Contenu du site ».
+model Realisation {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  title            String
+  category         String   @default("web") // web | ecommerce | branding | mobile
+  client           String   @default("")
+  year             String   @default("")
+  duration         String   @default("")
+  summary          String   @default("")
+  challenge        String   @default("")
+  solution         String   @default("")
+  image            String   @default("") // photo de couverture
+  gallery          String   @default("[]") // JSON : liste d'URLs d'images (captures, photos du projet)
+  liveUrl          String?  // lien vers le site / l'application réalisé(e)
+  results          String   @default("[]") // JSON : [{ value, label }]
+  features         String   @default("[]") // JSON : liste de textes
+  tags             String   @default("[]") // JSON : liste de textes (technologies…)
+  testimonialQuote String   @default("")
+  testimonialName  String   @default("")
+  testimonialRole  String   @default("")
+  accent           String   @default("terra") // terra | forest | gold
+  published        Boolean  @default(true)
+  position         Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([published, position])
+}

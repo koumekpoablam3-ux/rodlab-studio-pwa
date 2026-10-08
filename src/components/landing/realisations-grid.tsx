@@ -7,7 +7,7 @@ import { ArrowUpRight } from "lucide-react";
 import { CASE_CATEGORIES, type CaseCategory } from "@/lib/site-data-content";
 
 type GridItem = {
-  slug: string; image: string; title: string; summary: string; category: CaseCategory; categoryLabel: string;
+  slug: string; image: string; title: string; summary: string; category: string; categoryLabel: string;
   year: string; duration: string; client: string; tags: string[]; results: { value: string; label: string }[]; accent: "terra" | "forest" | "gold";
 };
 
@@ -15,13 +15,14 @@ const YEAR_BG = { terra: "bg-terra-600", forest: "bg-forest-700", gold: "bg-gold
 
 export function RealisationsGrid({ items }: { items: GridItem[] }) {
   const [filter, setFilter] = useState<CaseCategory | "tous">("tous");
+  const present = new Set(items.map((r) => r.category));
   const visible = items.filter((r) => filter === "tous" || r.category === filter);
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8" aria-label="Portfolio des réalisations">
       {/* Filtres */}
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrer par catégorie">
-        {CASE_CATEGORIES.map((c) => (
+        {CASE_CATEGORIES.filter((c) => c.value === "tous" || present.has(c.value)).map((c) => (
           <button
             key={c.value}
             onClick={() => setFilter(c.value)}
@@ -36,6 +37,12 @@ export function RealisationsGrid({ items }: { items: GridItem[] }) {
           </button>
         ))}
       </div>
+
+      {items.length === 0 && (
+        <p className="mt-10 rounded-3xl border border-cream-300 bg-card p-10 text-center text-ink-500">
+          Nos études de cas arrivent bientôt. En attendant, parlez-nous de votre projet : nous vous répondons sous 24 h.
+        </p>
+      )}
 
       {/* Grille */}
       <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -69,8 +76,8 @@ export function RealisationsGrid({ items }: { items: GridItem[] }) {
             <div className="flex flex-1 flex-col p-6">
               <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{r.client}</p>
               <p className="mt-3 flex-1 text-sm leading-relaxed text-ink-500">{r.summary}</p>
-              <div className="mt-5 grid grid-cols-3 gap-2 border-t border-cream-200 pt-4">
-                {r.results.map((res) => (
+              <div className={`mt-5 grid gap-2 border-t border-cream-200 pt-4 ${r.results.length === 0 ? "hidden" : r.results.length === 1 ? "grid-cols-1" : r.results.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                {r.results.slice(0, 3).map((res) => (
                   <div key={res.label}>
                     <p className="font-display text-lg font-semibold text-terra-600">{res.value}</p>
                     <p className="mt-0.5 text-[11px] leading-tight text-ink-400">{res.label}</p>

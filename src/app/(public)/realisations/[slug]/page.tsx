@@ -2,15 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { PageHero, CtaBand } from "@/components/landing/page-hero";
-import { REALISATIONS as REAL_SLUGS } from "@/lib/site-data-content";
 import { getRealisations } from "@/lib/site-overrides";
-import { Check, Quote, ArrowRight, CalendarDays, Clock3, User } from "lucide-react";
+import { Check, Quote, ArrowRight, ArrowUpRight, CalendarDays, Clock3, User } from "lucide-react";
 
 
 export const dynamic = "force-dynamic";
-export function generateStaticParams() {
-  return REAL_SLUGS.map((r) => ({ slug: r.slug }));
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -45,15 +41,29 @@ export default async function RealisationDetailPage({ params }: { params: Promis
             <User className="h-5 w-5 shrink-0 text-terra-600" aria-hidden="true" />
             <span className="font-medium text-ink-900">{item.client}</span>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl border border-cream-300 bg-white px-5 py-4">
-            <CalendarDays className="h-5 w-5 shrink-0 text-forest-600" aria-hidden="true" />
-            <span className="font-medium text-ink-900">Livré en {item.year}</span>
-          </div>
-          <div className="flex items-center gap-3 rounded-2xl border border-cream-300 bg-white px-5 py-4">
-            <Clock3 className="h-5 w-5 shrink-0 text-gold-600" aria-hidden="true" />
-            <span className="font-medium text-ink-900">Durée : {item.duration}</span>
-          </div>
+          {item.year && (
+            <div className="flex items-center gap-3 rounded-2xl border border-cream-300 bg-white px-5 py-4">
+              <CalendarDays className="h-5 w-5 shrink-0 text-forest-600" aria-hidden="true" />
+              <span className="font-medium text-ink-900">Livré en {item.year}</span>
+            </div>
+          )}
+          {item.duration && (
+            <div className="flex items-center gap-3 rounded-2xl border border-cream-300 bg-white px-5 py-4">
+              <Clock3 className="h-5 w-5 shrink-0 text-gold-600" aria-hidden="true" />
+              <span className="font-medium text-ink-900">Durée : {item.duration}</span>
+            </div>
+          )}
         </div>
+        {item.liveUrl && (
+          <a
+            href={item.liveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-terra-600 px-6 py-3 text-sm font-semibold text-cream-50 shadow-chip transition hover:bg-terra-700"
+          >
+            Voir le projet en ligne <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </a>
+        )}
       </PageHero>
 
       {/* ————— Image du projet ————— */}
@@ -74,38 +84,61 @@ export default async function RealisationDetailPage({ params }: { params: Promis
         </div>
       </section>
 
+      {/* ————— Galerie : captures et photos du projet ————— */}
+      {item.gallery.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8" aria-label="Galerie du projet">
+          <div className={`grid gap-4 ${item.gallery.length === 1 ? "" : "sm:grid-cols-2"} ${item.gallery.length >= 3 ? "lg:grid-cols-3" : ""}`}>
+            {item.gallery.map((src, i) => (
+              <a key={src} href={src} target="_blank" rel="noopener noreferrer" className="group relative block overflow-hidden rounded-3xl border border-cream-300 shadow-card">
+                <Image
+                  src={src}
+                  alt={`${item.title} — image ${i + 1} du projet`}
+                  width={960}
+                  height={640}
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className="h-64 w-full object-cover transition duration-500 group-hover:scale-105"
+                />
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ————— Résultats clés ————— */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8" aria-label="Résultats clés">
-        <div className="grid gap-6 sm:grid-cols-3">
-          {item.results.map((res) => (
-            <div key={res.label} className={`rounded-3xl ${ACCENT_BG[item.accent]} p-8 text-center text-white shadow-card`}>
-              <p className="font-display text-4xl font-semibold">{res.value}</p>
-              <p className="mt-2 text-sm text-white/85">{res.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {item.results.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8" aria-label="Résultats clés">
+          <div className={`grid gap-6 ${item.results.length === 1 ? "" : item.results.length === 2 ? "sm:grid-cols-2" : item.results.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
+            {item.results.map((res) => (
+              <div key={res.label} className={`rounded-3xl ${ACCENT_BG[item.accent]} p-8 text-center text-white shadow-card`}>
+                <p className="font-display text-4xl font-semibold">{res.value}</p>
+                <p className="mt-2 text-sm text-white/85">{res.label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ————— Défi / Solution ————— */}
       <section className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8" aria-labelledby="defi-title">
-        <div className="grid gap-8 lg:grid-cols-2">
-          <article className="rounded-3xl border border-cream-300 bg-card p-8 shadow-card">
+        <div className={`grid gap-8 ${item.challenge && item.solution ? "lg:grid-cols-2" : ""}`}>
+          {item.challenge && (<article className="rounded-3xl border border-cream-300 bg-card p-8 shadow-card">
             <p className="text-xs font-semibold uppercase tracking-widest text-terra-600">Le défi</p>
             <h2 id="defi-title" className="mt-3 font-display text-xl font-semibold text-ink-900">
               Le point de départ
             </h2>
-            <p className="mt-4 text-sm leading-relaxed text-ink-500">{item.challenge}</p>
-          </article>
-          <article className="rounded-3xl border border-cream-300 bg-card p-8 shadow-card">
+            <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-ink-500">{item.challenge}</p>
+          </article>)}
+          {item.solution && (<article className="rounded-3xl border border-cream-300 bg-card p-8 shadow-card">
             <p className="text-xs font-semibold uppercase tracking-widest text-forest-600">Notre solution</p>
             <h2 className="mt-3 font-display text-xl font-semibold text-ink-900">Ce que nous avons construit</h2>
-            <p className="mt-4 text-sm leading-relaxed text-ink-500">{item.solution}</p>
-          </article>
+            <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-ink-500">{item.solution}</p>
+          </article>)}
         </div>
 
         {/* Fonctionnalités livrées */}
+        {(item.features.length > 0 || item.tags.length > 0) && (
         <div className="mt-8 rounded-3xl border border-cream-300 bg-cream-100 p-8">
-          <h3 className="font-display text-lg font-semibold text-ink-900">Fonctionnalités livrées</h3>
+          {item.features.length > 0 && <h3 className="font-display text-lg font-semibold text-ink-900">Fonctionnalités livrées</h3>}
           <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {item.features.map((f) => (
               <li key={f} className="flex items-start gap-2.5 text-sm text-ink-700">
@@ -124,9 +157,11 @@ export default async function RealisationDetailPage({ params }: { params: Promis
             ))}
           </div>
         </div>
+        )}
       </section>
 
       {/* ————— Témoignage client ————— */}
+      {item.testimonial && (
       <section className="border-y border-cream-300 bg-forest-900 py-16 text-cream-100" aria-label="Témoignage du client">
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
           <Quote className="mx-auto h-10 w-10 text-gold-400" aria-hidden="true" />
@@ -137,8 +172,10 @@ export default async function RealisationDetailPage({ params }: { params: Promis
           <p className="text-xs text-forest-100/60">{item.testimonial.role}</p>
         </div>
       </section>
+      )}
 
       {/* ————— Projets similaires ————— */}
+      {similar.length > 0 && (
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8" aria-labelledby="similaires-title">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h2 id="similaires-title" className="font-display text-2xl font-semibold text-ink-900">
@@ -175,6 +212,7 @@ export default async function RealisationDetailPage({ params }: { params: Promis
           ))}
         </div>
       </section>
+      )}
 
       <CtaBand
         title="Un projet similaire en tête ?"

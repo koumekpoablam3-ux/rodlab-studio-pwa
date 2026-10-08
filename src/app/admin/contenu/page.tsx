@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { SERVICES, TEAM, TESTIMONIALS, AGENCY_PHOTOS } from "@/lib/site-data";
-import { REALISATIONS, BLOG_POSTS } from "@/lib/site-data-content";
+import { BLOG_POSTS } from "@/lib/site-data-content";
 import { DEFAULT_CAROUSEL, DEFAULT_TEAM_IDS, getOverrides, withTeamIds } from "@/lib/site-overrides";
 import { ContentEditor, type Group } from "./content-editor";
 
@@ -37,15 +37,6 @@ export default async function AdminContenuPage() {
     services: SERVICES.map((s) => ({
       title: s.title,
       fields: [f(`service.${s.slug}.image`, "Photo du service", "image", s.image)],
-    })),
-    realisations: REALISATIONS.map((r) => ({
-      title: r.title,
-      fields: [
-        f(`hide.real.${r.slug}`, "Masquer ce projet sur le site", "toggle", ""),
-        f(`real.${r.slug}.image`, "Photo du projet", "image", r.image),
-        f(`real.${r.slug}.title`, "Titre", "text", r.title),
-        f(`real.${r.slug}.summary`, "Résumé", "textarea", r.summary),
-      ],
     })),
     blog: BLOG_POSTS.map((p) => ({
       title: p.title,

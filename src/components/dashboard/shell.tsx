@@ -7,7 +7,7 @@ import { CallProvider } from "@/components/chat/call-provider";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
-  ShieldCheck, Inbox, Users, FolderKanban, FileText, Receipt, MessageSquare,
+  ShieldCheck, Images, Inbox, Users, FolderKanban, FileText, Receipt, MessageSquare,
   LayoutTemplate, UsersRound, CircleUserRound, Menu, LogOut, Bell, ExternalLink, X,
   GraduationCap, Video,
 } from "lucide-react";
@@ -30,6 +30,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/formation", label: "Academy", icon: GraduationCap },
   { href: "/admin/live", label: "Sessions live", icon: Video },
   { href: "/admin/messagerie", label: "Messagerie", icon: MessageSquare },
+  { href: "/admin/realisations", label: "Réalisations", icon: Images },
   { href: "/admin/contenu", label: "Contenu du site", icon: LayoutTemplate },
   { href: "/admin/equipe", label: "Équipe & comptes", icon: UsersRound },
   { href: "/admin/profil", label: "Mon profil", icon: CircleUserRound },

@@ -3,6 +3,7 @@ import { SCHEMA_STATEMENTS } from "@/lib/bootstrap-schema";
 import { seedDemoData } from "@/lib/demo-seed";
 import { syncMissingAcademyCourses } from "@/lib/academy-sync";
 import { CHAT_STATEMENTS, migrateLegacyMessages } from "@/lib/chat-schema";
+import { REALISATION_STATEMENTS, ensureRealisationsSeeded } from "@/lib/realisations";
 
 /**
  * RODLAB STUDIO — Auto-réparation de la base de données
@@ -48,6 +49,7 @@ async function runBootstrap() {
     await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "invitePending" BOOLEAN NOT NULL DEFAULT false`);
     await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "invitedById" TEXT`);
     for (const statement of CHAT_STATEMENTS) await db.$executeRawUnsafe(statement);
+    for (const statement of REALISATION_STATEMENTS) await db.$executeRawUnsafe(statement);
     await db.$executeRawUnsafe(
       `CREATE TABLE IF NOT EXISTS "SiteImage" ( "id" TEXT NOT NULL PRIMARY KEY, "mime" TEXT NOT NULL, "size" INTEGER NOT NULL, "data" BYTEA NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP )`
     );
@@ -80,6 +82,13 @@ async function runBootstrap() {
     }
   } catch (error) {
     console.error("[bootstrap] Désignation du directeur échouée (non bloquant) :", error);
+  }
+
+  // 3 quater) Réalisations d'exemple importées en base (une seule fois) pour être modifiables.
+  try {
+    await ensureRealisationsSeeded();
+  } catch (error) {
+    console.error("[bootstrap] Import des réalisations échoué (non bloquant) :", error);
   }
 
   // 4) Cours ajoutés au catalogue après le seed initial (indépendant de userCount,

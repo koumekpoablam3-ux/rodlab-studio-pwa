@@ -35,7 +35,6 @@ const ACCENTS = {
   gold: { chip: "bg-gold-100 text-gold-600", link: "text-gold-600" },
 } as const;
 
-const FEATURED = ["kafo-market", "hotel-palm-beach", "togo-deliveries"];
 
 /**
  * SEO local — JSON-LD Schema.org « ProfessionalService » injecté directement
@@ -136,7 +135,7 @@ export default async function HomePage() {
     getServices(), getTestimonials(), getRealisations(), getBlogPosts(),
   ]);
   const user = session?.user;
-  const featured = FEATURED.map((slug) => REALISATIONS.find((r) => r.slug === slug)!).filter(Boolean);
+  const featured = REALISATIONS.slice(0, 3);
   const latestPosts = BLOG_POSTS.slice(0, 3);
 
   return (
@@ -328,7 +327,8 @@ export default async function HomePage() {
       </section>
 
       {/* ————— RÉALISATIONS (aperçu) ————— */}
-      <section className="border-y border-cream-300 bg-cream-50 py-20" aria-labelledby="realisations-title">
+      {featured.length > 0 && (
+        <section className="border-y border-cream-300 bg-cream-50 py-20" aria-labelledby="realisations-title">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="max-w-2xl">
@@ -382,6 +382,7 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ————— MÉTHODE ————— */}
       <section className="border-y border-cream-300 bg-forest-900 py-20 text-cream-100" aria-labelledby="methode-title">

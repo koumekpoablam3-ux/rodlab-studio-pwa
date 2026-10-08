@@ -41,6 +41,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   "/admin/formation": "training",
   "/admin/live": "training",
   "/admin/contenu": "content",
+  "/admin/realisations": "content",
 };
 
 const VALID = new Set<string>(ALL_PERMISSIONS);
