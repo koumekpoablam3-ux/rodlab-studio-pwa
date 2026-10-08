@@ -23,6 +23,7 @@ type UserRow = {
   jobTitle: string | null;
   city: string | null;
   avatarColor: string | null;
+  avatarUrl?: string | null;
   createdAt: string | Date;
   _count: { projects: number; messages: number };
 };
@@ -164,7 +165,7 @@ export function TeamBoard({ initialUsers }: { initialUsers: UserRow[] }) {
                     <tr key={u.id} className="transition hover:bg-cream-50/60">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <Avatar name={u.role === "ENTREPRISE" ? u.companyName || u.name : u.name} color={u.avatarColor} size="sm" />
+                          <Avatar name={u.role === "ENTREPRISE" ? u.companyName || u.name : u.name} color={u.avatarColor} src={u.avatarUrl} size="sm" />
                           <div className="min-w-0">
                             <p className="flex items-center gap-1.5 truncate font-medium text-ink-900">
                               <Icon className="h-3.5 w-3.5 text-ink-400 shrink-0" aria-hidden="true" />

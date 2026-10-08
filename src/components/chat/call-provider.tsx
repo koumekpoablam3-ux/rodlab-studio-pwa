@@ -16,11 +16,11 @@ import { cn } from "@/lib/utils";
 
 type Kind = "AUDIO" | "VIDEO";
 type Phase = "idle" | "incoming" | "outgoing" | "active";
-type PeerInfo = { name: string; avatarColor: string | null };
-type Participant = { userId: string; name: string; avatarColor: string | null; status: string; joinedAt: string | null };
+type PeerInfo = { name: string; avatarColor: string | null; avatarUrl?: string | null };
+type Participant = { userId: string; name: string; avatarColor: string | null; avatarUrl?: string | null; status: string; joinedAt: string | null };
 type Meta = { sharing: boolean; muted: boolean; camOff: boolean };
 type Incoming = { id: string; kind: Kind; conversationId: string; joined: number; caller: PeerInfo | null };
-type DirUser = { id: string; name: string; subtitle: string; avatarColor: string | null; online: boolean };
+type DirUser = { id: string; name: string; subtitle: string; avatarColor: string | null; avatarUrl?: string | null; online: boolean };
 type PeerState = { pc: RTCPeerConnection; stream: MediaStream; pending: RTCIceCandidateInit[]; videoSender: RTCRtpSender | null; connected: boolean };
 
 type CallContextValue = { startCall: (conversationId: string, kind: Kind, peer: PeerInfo) => Promise<void>; inCall: boolean };
@@ -38,9 +38,9 @@ async function post(url: string, body: unknown) {
 
 /** Une tuile : la vidéo (ou l'écran partagé) du participant, sinon son avatar. Le <video> reste monté : c'est lui qui joue le son. */
 function Tile({
-  stream, name, color, showVideo, contain, muted, ringing, badge, className,
+  stream, name, color, photo, showVideo, contain, muted, ringing, badge, className,
 }: {
-  stream: MediaStream | null; name: string; color: string | null; showVideo: boolean; contain?: boolean;
+  stream: MediaStream | null; name: string; color: string | null; photo?: string | null; showVideo: boolean; contain?: boolean;
   muted?: boolean; ringing?: boolean; badge?: React.ReactNode; className?: string;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
@@ -56,7 +56,7 @@ function Tile({
       />
       {!showVideo && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-2 text-center">
-          <Avatar name={name || "?"} color={color} size="lg" className="h-16 w-16 text-xl sm:h-20 sm:w-20" />
+          <Avatar name={name || "?"} color={color} src={photo} size="lg" className="h-20 w-20 text-2xl sm:h-28 sm:w-28 sm:text-3xl" />
           {ringing && <span className="text-xs text-cream-200/80">Appel en cours…</span>}
         </div>
       )}
@@ -242,10 +242,14 @@ export function CallProvider({ myId, children }: { myId: string; children: React
 
       // Un émetteur audio + un émetteur vidéo TOUJOURS présents : partager l'écran ou allumer la caméra
       // plus tard se fait par simple remplacement de piste, sans renégocier la connexion.
-      const audioTrack = local.getAudioTracks()[0];
-      pc.addTransceiver(audioTrack ?? "audio", { direction: "sendrecv", streams: [local] });
-      const videoTrack = outgoingVideoTrack();
-      state.videoSender = pc.addTransceiver(videoTrack ?? "video", { direction: "sendrecv", streams: [local] }).sender;
+      // Seul celui qui envoie l'offre crée ses émetteurs d'avance. Celui qui répond DOIT réutiliser ceux
+      // créés par l'offre reçue (voir handleSignal) : sinon il ne renvoie rien et l'autre ne le voit/entend pas.
+      if (initiator) {
+        const audioTrack = local.getAudioTracks()[0];
+        pc.addTransceiver(audioTrack ?? "audio", { direction: "sendrecv", streams: [local] });
+        const videoTrack = outgoingVideoTrack();
+        state.videoSender = pc.addTransceiver(videoTrack ?? "video", { direction: "sendrecv", streams: [local] }).sender;
+      }
 
       pc.onicecandidate = (e) => { if (e.candidate) queueSignal(userId, "ice", JSON.stringify(e.candidate.toJSON())); };
       pc.ontrack = (e) => {
@@ -295,6 +299,20 @@ export function CallProvider({ myId, children }: { myId: string; children: React
       if (s.type === "offer") {
         if (pc.signalingState !== "stable") return;
         await pc.setRemoteDescription(JSON.parse(s.payload));
+        // On répond en envoyant NOS flux : on branche micro et caméra sur les émetteurs créés par l'offre.
+        const local = localRef.current;
+        for (const t of pc.getTransceivers()) {
+          const trackKind = t.receiver.track.kind;
+          (t.sender as unknown as { setStreams?: (...streams: MediaStream[]) => void }).setStreams?.(...(local ? [local] : []));
+          t.direction = "sendrecv";
+          if (trackKind === "audio") {
+            const audio = local?.getAudioTracks()[0];
+            if (audio) await t.sender.replaceTrack(audio).catch(() => {});
+          } else if (trackKind === "video") {
+            peer.videoSender = t.sender;
+            await t.sender.replaceTrack(outgoingVideoTrack()).catch(() => {});
+          }
+        }
         await flushPending();
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
@@ -349,7 +367,7 @@ export function CallProvider({ myId, children }: { myId: string; children: React
       return;
     }
     setKind(k);
-    setParticipants([{ userId: "pending", name: p.name, avatarColor: p.avatarColor, status: "INVITED", joinedAt: null }]);
+    setParticipants([{ userId: "pending", name: p.name, avatarColor: p.avatarColor, avatarUrl: p.avatarUrl, status: "INVITED", joinedAt: null }]);
     setPhaseBoth("outgoing");
     const stream = await openMedia(k);
     if (!stream) { cleanup(); return; }
@@ -551,6 +569,7 @@ export function CallProvider({ myId, children }: { myId: string; children: React
   const remotes = participants.filter((p) => p.userId !== myId && (p.status === "JOINED" || p.status === "INVITED"));
   const remoteSharer = remotes.find((p) => metas[p.userId]?.sharing)?.userId ?? null;
   const spotlight = sharing ? "me" : remoteSharer;
+  const immersive = !spotlight && remotes.length <= 1;
   const hasLocalVideo = sharing || (!camOff && !!localRef.current?.getVideoTracks()[0]);
   const localStream = sharing ? screenRef.current : localRef.current;
 
@@ -566,6 +585,7 @@ export function CallProvider({ myId, children }: { myId: string; children: React
         stream={peer?.stream ?? null}
         name={p.name}
         color={p.avatarColor}
+        photo={p.avatarUrl}
         showVideo={showVideo}
         contain={contain && !!meta?.sharing}
         ringing={p.status === "INVITED"}
@@ -604,7 +624,7 @@ export function CallProvider({ myId, children }: { myId: string; children: React
         <div role="alertdialog" aria-label="Appel entrant" className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-forest-900/95 p-6 text-center text-cream-50 backdrop-blur-sm">
           <span className="relative mb-6 inline-flex">
             <span className="absolute inset-0 animate-ping rounded-full bg-terra-600/40" aria-hidden="true" />
-            <Avatar name={incoming.caller?.name || "?"} color={incoming.caller?.avatarColor ?? null} size="lg" className="relative h-28 w-28 text-4xl" />
+            <Avatar name={incoming.caller?.name || "?"} color={incoming.caller?.avatarColor ?? null} src={incoming.caller?.avatarUrl} size="lg" className="relative h-28 w-28 text-4xl" />
           </span>
           <p className="font-display text-2xl font-semibold">{incoming.caller?.name}</p>
           <p className="mt-1 text-sm text-cream-200/80">
@@ -620,8 +640,8 @@ export function CallProvider({ myId, children }: { myId: string; children: React
       )}
 
       {(phase === "outgoing" || phase === "active") && (
-        <div role="dialog" aria-label="Appel en cours" className="fixed inset-0 z-[100] flex flex-col bg-forest-900 text-cream-50">
-          <div className="relative z-10 flex items-center justify-between gap-3 bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
+        <div role="dialog" aria-label="Appel en cours" className="fixed inset-0 z-[100] overflow-hidden bg-forest-900 text-cream-50">
+          <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
             <div className="min-w-0">
               <p className="truncate font-semibold">{names || "Appel"}</p>
               <p className="text-xs text-cream-100/80" aria-live="polite">{status}{remotes.length > 1 ? ` · ${remotes.filter((r) => r.status === "JOINED").length + 1} participants` : ""}</p>
@@ -629,7 +649,7 @@ export function CallProvider({ myId, children }: { myId: string; children: React
             {sharing && <span className="rounded-full bg-terra-600 px-3 py-1 text-xs font-semibold">Vous partagez votre écran</span>}
           </div>
 
-          <div className="relative min-h-0 flex-1 p-2 sm:p-4">
+          <div className={cn("absolute inset-0", immersive ? "" : "px-2 pb-28 pt-16 sm:px-4")}>
             {spotlight ? (
               <div className="flex h-full flex-col gap-2">
                 <div className="min-h-0 flex-1">
@@ -642,8 +662,8 @@ export function CallProvider({ myId, children }: { myId: string; children: React
               </div>
             ) : remotes.length <= 1 ? (
               <div className="relative h-full">
-                {remotes[0] ? remoteTile(remotes[0], "h-full w-full") : <div className="h-full" />}
-                {hasLocalVideo && localTile("absolute bottom-3 right-3 z-20 h-36 w-28 border-2 border-white/30 shadow-lg sm:h-44 sm:w-36")}
+                {remotes[0] ? remoteTile(remotes[0], "h-full w-full rounded-none") : <div className="h-full" />}
+                {hasLocalVideo && localTile("absolute bottom-28 right-3 z-20 h-36 w-28 border-2 border-white/30 shadow-lg sm:h-44 sm:w-36")}
               </div>
             ) : (
               <div className={cn("grid h-full auto-rows-fr gap-2", remotes.length + 1 <= 4 ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-3")}>
@@ -653,7 +673,7 @@ export function CallProvider({ myId, children }: { myId: string; children: React
             )}
           </div>
 
-          <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 bg-gradient-to-t from-black/60 to-transparent p-4 pb-6 sm:gap-5">
+          <div className="absolute inset-x-0 bottom-0 z-10 flex flex-wrap items-center justify-center gap-3 bg-gradient-to-t from-black/70 to-transparent p-4 pb-6 sm:gap-5">
             <button onClick={toggleMic} aria-label={muted ? "Réactiver le micro" : "Couper le micro"} aria-pressed={muted} className={cn(ctrl, muted ? "bg-white text-forest-900" : "bg-white/15 hover:bg-white/25")}>
               {muted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
             </button>
@@ -690,7 +710,7 @@ export function CallProvider({ myId, children }: { myId: string; children: React
                       {dirFiltered.map((u) => (
                         <li key={u.id} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-cream-50">
                           <span className="relative inline-flex shrink-0">
-                            <Avatar name={u.name} color={u.avatarColor} size="md" />
+                            <Avatar name={u.name} color={u.avatarColor} src={u.avatarUrl} size="md" />
                             <span className={cn("absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white", u.online ? "bg-green-500" : "bg-ink-300")} />
                           </span>
                           <span className="min-w-0 flex-1">

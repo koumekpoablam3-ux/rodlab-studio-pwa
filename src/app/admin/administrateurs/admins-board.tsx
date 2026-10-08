@@ -14,7 +14,7 @@ import { timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type Admin = {
-  id: string; name: string; email: string; jobTitle: string | null; avatarColor: string; active: boolean;
+  id: string; name: string; email: string; jobTitle: string | null; avatarColor: string; avatarUrl?: string | null; active: boolean;
   isDirector: boolean; permissions: string | null; invitePending: boolean; lastSeenAt: string | null; createdAt: string;
 };
 type LinkResult = { name: string; email: string; link: string; emailSent: boolean; emailError: string | null; kind: "invite" | "reset" };
@@ -22,7 +22,7 @@ const errText = (d: { error?: string; detail?: string }, fallback: string) => (d
 
 const permLabel = (k: string) => PERMISSIONS.find((p) => p.key === k)?.label ?? k;
 
-function PermissionPicker({ value, onChange }: { value: Permission[]; onChange: (v: Permission[]) => void }) {
+export function PermissionPicker({ value, onChange }: { value: Permission[]; onChange: (v: Permission[]) => void }) {
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       {PERMISSIONS.map((p) => {
@@ -128,6 +128,16 @@ export function AdminsBoard({ myId, admins }: { myId: string; admins: Admin[] })
     router.refresh();
   }
 
+  async function demote(a: Admin) {
+    if (!window.confirm(`Retirer le rôle d'administrateur à ${a.name} ?\n\nSon compte et ses données sont conservés : elle redevient simple cliente. Elle recevra un email.`)) return;
+    setBusy(a.id);
+    const { ok, data } = await call(`/api/admin/admins/${a.id}`, "PATCH", { demoteTo: "CLIENT" });
+    setBusy(null);
+    if (!ok) { toast.error(errText(data, "Action impossible")); return; }
+    toast.success(data.emailSent ? "Rôle retiré — un email a été envoyé" : "Rôle retiré (l'email n'a pas pu partir)");
+    router.refresh();
+  }
+
   async function remove(a: Admin) {
     if (!window.confirm(`Supprimer définitivement le compte de ${a.name} ?\n\nSes messages seront supprimés aussi. Si vous voulez seulement lui retirer l'accès, utilisez « Suspendre ».`)) return;
     setBusy(a.id);
@@ -229,7 +239,7 @@ export function AdminsBoard({ myId, admins }: { myId: string; admins: Admin[] })
           return (
             <li key={a.id} className={cardClass(a)}>
               <div className="flex flex-wrap items-start gap-4">
-                <Avatar name={a.name} color={a.avatarColor} size="lg" />
+                <Avatar name={a.name} color={a.avatarColor} src={a.avatarUrl} size="lg" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-display text-lg font-semibold text-ink-900">{a.name}</h3>
@@ -256,6 +266,7 @@ export function AdminsBoard({ myId, admins }: { myId: string; admins: Admin[] })
                     <button onClick={() => (isEditing ? setEditing(null) : startEdit(a))} title="Modifier les droits" aria-label={`Modifier ${a.name}`} className="flex h-9 w-9 items-center justify-center rounded-xl border border-cream-300 text-ink-500 hover:bg-cream-100"><Pencil className="h-4 w-4" /></button>
                     <button onClick={() => sendLink(a)} disabled={busy === a.id} title={a.invitePending ? "Renvoyer l'invitation" : "Envoyer un lien de nouveau mot de passe"} aria-label={`Envoyer un lien à ${a.name}`} className="flex h-9 w-9 items-center justify-center rounded-xl border border-cream-300 text-ink-500 hover:bg-cream-100 disabled:opacity-50"><KeyRound className="h-4 w-4" /></button>
                     <button onClick={() => toggleActive(a)} disabled={busy === a.id} title={a.active ? "Suspendre" : "Réactiver"} aria-label={a.active ? `Suspendre ${a.name}` : `Réactiver ${a.name}`} className="flex h-9 w-9 items-center justify-center rounded-xl border border-cream-300 text-ink-500 hover:bg-cream-100 disabled:opacity-50">{a.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}</button>
+                    <button onClick={() => demote(a)} disabled={busy === a.id} title="Retirer le rôle d'administrateur (devient client)" aria-label={`Retirer le rôle admin à ${a.name}`} className="flex h-9 items-center rounded-xl border border-cream-300 px-3 text-xs font-medium text-ink-600 hover:bg-cream-100 disabled:opacity-50">Rétrograder</button>
                     <button onClick={() => remove(a)} disabled={busy === a.id} title="Supprimer" aria-label={`Supprimer ${a.name}`} className="flex h-9 w-9 items-center justify-center rounded-xl border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 )}

@@ -12,7 +12,7 @@ import { compressImage } from "@/lib/image-compress";
 import { formatTime, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type User = { id: string; name: string; role: string; subtitle: string; avatarColor: string | null; online: boolean; lastSeenAt: string | null };
+type User = { id: string; name: string; role: string; subtitle: string; avatarColor: string | null; avatarUrl?: string | null; online: boolean; lastSeenAt: string | null };
 type Conversation = {
   id: string;
   others: User[];
@@ -57,7 +57,7 @@ function statusOf(u: User) {
 function PresenceAvatar({ user, size = "md" }: { user: User; size?: "sm" | "md" | "lg" }) {
   return (
     <span className="relative inline-flex shrink-0">
-      <Avatar name={user.name} color={user.avatarColor} size={size} />
+      <Avatar name={user.name} color={user.avatarColor} src={user.avatarUrl} size={size} />
       <span
         className={cn("absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white", user.online ? "bg-green-500" : "bg-ink-300")}
         title={user.online ? "En ligne" : "Hors ligne"}
@@ -454,9 +454,9 @@ export function ChatApp({
               </div>
               {!isGroup && peer && (
                 <div className="flex gap-1.5">
-                  <button disabled={inCall} onClick={() => startCall(activeId, "AUDIO", { name: peer.name, avatarColor: peer.avatarColor })} aria-label={`Appel audio avec ${peer.name}`} title="Appel audio"
+                  <button disabled={inCall} onClick={() => startCall(activeId, "AUDIO", { name: peer.name, avatarColor: peer.avatarColor, avatarUrl: peer.avatarUrl })} aria-label={`Appel audio avec ${peer.name}`} title="Appel audio"
                     className="flex h-10 w-10 items-center justify-center rounded-full text-forest-900 transition hover:bg-cream-100 disabled:opacity-40"><Phone className="h-5 w-5" /></button>
-                  <button disabled={inCall} onClick={() => startCall(activeId, "VIDEO", { name: peer.name, avatarColor: peer.avatarColor })} aria-label={`Appel vidéo avec ${peer.name}`} title="Appel vidéo"
+                  <button disabled={inCall} onClick={() => startCall(activeId, "VIDEO", { name: peer.name, avatarColor: peer.avatarColor, avatarUrl: peer.avatarUrl })} aria-label={`Appel vidéo avec ${peer.name}`} title="Appel vidéo"
                     className="flex h-10 w-10 items-center justify-center rounded-full text-forest-900 transition hover:bg-cream-100 disabled:opacity-40"><Video className="h-5 w-5" /></button>
                 </div>
               )}
@@ -482,7 +482,7 @@ export function ChatApp({
                         {outcome === "ended" ? (video ? <Video className="h-3.5 w-3.5" /> : <Phone className="h-3.5 w-3.5" />) : <PhoneMissed className="h-3.5 w-3.5 text-red-500" />}
                         {label} · {formatTime(m.createdAt)}
                         {!isGroup && peer && !inCall && (
-                          <button onClick={() => startCall(activeId, video ? "VIDEO" : "AUDIO", { name: peer.name, avatarColor: peer.avatarColor })} className="font-semibold text-terra-600 hover:underline">Rappeler</button>
+                          <button onClick={() => startCall(activeId, video ? "VIDEO" : "AUDIO", { name: peer.name, avatarColor: peer.avatarColor, avatarUrl: peer.avatarUrl })} className="font-semibold text-terra-600 hover:underline">Rappeler</button>
                         )}
                       </span>
                     </div>

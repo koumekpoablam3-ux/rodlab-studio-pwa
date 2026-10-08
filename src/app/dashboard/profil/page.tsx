@@ -15,7 +15,7 @@ export default async function DashboardProfilPage() {
     where: { id: session.user.id },
     select: {
       id: true, name: true, email: true, role: true, phone: true, jobTitle: true,
-      companyName: true, address: true, city: true, country: true, avatarColor: true, createdAt: true,
+      companyName: true, address: true, city: true, country: true, avatarColor: true, avatarUrl: true, createdAt: true,
     },
   });
   if (!user) redirect("/connexion");

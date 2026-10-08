@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/access";
 import { serializePermissions } from "@/lib/permissions";
 import { issueSetupLink, sendSetupEmail, siteOrigin } from "@/lib/invite";
+import { sendEmailStrict } from "@/lib/email";
 
 const updateSchema = z.object({
   name: z.string().trim().min(2).max(80).optional(),
@@ -11,6 +12,8 @@ const updateSchema = z.object({
   avatarColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   permissions: z.array(z.string()).optional(),
   active: z.boolean().optional(),
+  /** Retire le rôle administrateur : le compte devient un compte client / entreprise (données conservées). */
+  demoteTo: z.enum(["CLIENT", "ENTREPRISE"]).optional(),
   /** Envoie un nouveau lien : invitation (compte jamais activé) ou réinitialisation. */
   action: z.literal("send-link").optional(),
 });
@@ -36,9 +39,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const parsed = updateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Données invalides" }, { status: 400 });
-  const { permissions, action, ...rest } = parsed.data;
+  const { permissions, action, demoteTo, ...rest } = parsed.data;
 
   try {
+    if (demoteTo) {
+      await db.user.update({ where: { id: target.id }, data: { role: demoteTo, permissions: null, invitePending: false } });
+      const mail = await sendEmailStrict(
+        target.email,
+        "Vos accès administrateur ont été retirés — RodLab Studio",
+        `Bonjour ${target.name.trim().split(/\s+/)[0] || target.name},\n\nVotre rôle d'administrateur sur RodLab Studio a été retiré. Votre compte et vos données sont conservés : vous retrouvez votre espace ${demoteTo === "ENTREPRISE" ? "entreprise" : "client"} avec la même adresse email et le même mot de passe.\n\nDéconnectez-vous puis reconnectez-vous pour mettre à jour votre espace.`,
+        `${siteOrigin(req)}/connexion`,
+        "Me connecter"
+      );
+      return NextResponse.json({ ok: true, emailSent: mail.ok });
+    }
+
     if (action === "send-link") {
       const kind = target.invitePending ? "invite" : "reset";
       const { link } = await issueSetupLink(target.id, kind, siteOrigin(req));

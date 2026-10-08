@@ -11,7 +11,7 @@ export default async function AdminEquipePage() {
     where: { role: { not: "ADMIN" } },
     select: {
       id: true, name: true, email: true, role: true, phone: true, companyName: true,
-      jobTitle: true, city: true, avatarColor: true, createdAt: true,
+      jobTitle: true, city: true, avatarColor: true, avatarUrl: true, createdAt: true,
       _count: { select: { projects: true, messages: true } },
     },
     orderBy: [{ role: "asc" }, { createdAt: "desc" }],

@@ -63,6 +63,7 @@ export type ShellUser = {
   avatarColor?: string | null;
   companyName?: string | null;
   isDirector?: boolean;
+  avatarUrl?: string | null;
 };
 
 type Notification = {
@@ -256,7 +257,7 @@ export function DashboardShell({
 
       <div className="border-t border-forest-800 p-4">
         <div className="flex items-center gap-3">
-          <Avatar name={displayName} color={user.avatarColor} size="sm" />
+          <Avatar name={displayName} color={user.avatarColor} src={user.avatarUrl} size="sm" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-cream-50">{displayName}</p>
             <p className="truncate text-xs text-forest-200/70">{user.isDirector ? "Directeur" : ROLE_LABELS[user.role]}</p>
@@ -313,7 +314,7 @@ export function DashboardShell({
               className="hidden sm:block"
               aria-label="Mon profil"
             >
-              <Avatar name={displayName} color={user.avatarColor} size="sm" />
+              <Avatar name={displayName} color={user.avatarColor} src={user.avatarUrl} size="sm" />
             </Link>
           </div>
         </header>

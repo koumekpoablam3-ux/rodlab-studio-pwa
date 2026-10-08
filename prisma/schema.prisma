@@ -26,6 +26,7 @@ model User {
   country      String?  @default("Togo")
   avatarColor  String   @default("#bd4f2b")
   active       Boolean  @default(true) // false = compte suspendu par un admin (connexion bloquée)
+  avatarUrl     String?  // photo de profil téléversée (/api/site-image/…) ; sinon initiales + couleur
   isDirector    Boolean  @default(false) // le directeur : seul à gérer les comptes administrateur
   permissions   String?  // administrateurs : sections autorisées (séparées par des virgules) ; null = ancien compte, accès complet
   invitePending Boolean  @default(false) // invitation envoyée, mot de passe pas encore défini par la personne

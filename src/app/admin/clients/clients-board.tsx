@@ -26,6 +26,7 @@ type UserRow = {
   jobTitle: string | null;
   city: string | null;
   avatarColor: string | null;
+  avatarUrl?: string | null;
   active: boolean;
   createdAt: string | Date;
   _count: { projects: number; quotes: number; invoices: number };
@@ -43,6 +44,7 @@ type UserDetail = {
   city: string | null;
   country: string | null;
   avatarColor: string | null;
+  avatarUrl?: string | null;
   active: boolean;
   createdAt: string | Date;
   projects: { id: string; title: string; status: string; progress: number; budget: number | null }[];
@@ -254,7 +256,7 @@ export function ClientsBoard({ initialUsers }: { initialUsers: UserRow[] }) {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <Avatar name={displayName(u)} color={u.avatarColor} />
+                  <Avatar name={displayName(u)} color={u.avatarColor} src={u.avatarUrl} />
                   <div className="min-w-0">
                     <p className="truncate font-display text-base font-semibold text-ink-900">{displayName(u)}</p>
                     <p className="truncate text-xs text-ink-500">{u.email}</p>
@@ -300,7 +302,7 @@ export function ClientsBoard({ initialUsers }: { initialUsers: UserRow[] }) {
               <DialogHeader>
                 <DialogTitle className="flex items-center justify-between gap-3 pr-8 font-display text-xl">
                   <span className="flex items-center gap-3">
-                    <Avatar name={displayName(detail)} color={detail.avatarColor} />
+                    <Avatar name={displayName(detail)} color={detail.avatarColor} src={detail.avatarUrl} />
                     {displayName(detail)}
                     {!detail.active && <StatusBadge label="Suspendu" colorClass="bg-red-100 text-red-700" />}
                   </span>

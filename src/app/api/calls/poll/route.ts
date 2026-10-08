@@ -62,6 +62,7 @@ export async function GET(req: NextRequest) {
         userId: r.userId,
         name: byId.get(r.userId)?.name ?? "Participant",
         avatarColor: byId.get(r.userId)?.avatarColor ?? null,
+        avatarUrl: byId.get(r.userId)?.avatarUrl ?? null,
         status: r.status,
         joinedAt: r.joinedAt ? r.joinedAt.toISOString() : null,
       }));

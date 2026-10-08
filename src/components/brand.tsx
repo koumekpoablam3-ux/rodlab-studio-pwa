@@ -50,9 +50,12 @@ export function Avatar({
   color = "#bd4f2b",
   size = "md",
   className,
+  src,
 }: {
   name: string;
   color?: string | null;
+  /** Photo de profil (sinon : initiales sur fond de couleur). */
+  src?: string | null;
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
@@ -62,13 +65,16 @@ export function Avatar({
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold text-white",
         dim,
         className
       )}
       style={{ backgroundColor: color || "#bd4f2b" }}
     >
       {getInitials(name)}
+      {src && (
+        <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+      )}
     </span>
   );
 }

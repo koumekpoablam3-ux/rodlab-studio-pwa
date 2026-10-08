@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Loader2, KeyRound, Palette, UserRound, Mail, Phone, Briefcase, Building2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/brand";
+import { compressImage } from "@/lib/image-compress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ROLE_LABELS, Role, AVATAR_COLORS } from "@/lib/roles";
@@ -23,6 +24,7 @@ export type ProfileUser = {
   city: string | null;
   country: string | null;
   avatarColor: string | null;
+  avatarUrl?: string | null;
   createdAt: string | Date;
 };
 
@@ -41,6 +43,40 @@ export function ProfileForm({ user, variant }: { user: ProfileUser; variant: "ad
     avatarColor: user.avatarColor ?? "#bd4f2b",
   });
   const [saving, setSaving] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(user.avatarUrl ?? null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const photoInput = useRef<HTMLInputElement>(null);
+
+  async function uploadPhoto(file?: File | null) {
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      const small = await compressImage(file, 512, 0.85);
+      const body = new FormData();
+      body.append("file", small);
+      const res = await fetch("/api/profile/avatar", { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Échec de l'envoi");
+      setPhoto(data.url);
+      toast.success("Photo de profil mise à jour");
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Échec de l'envoi");
+    } finally {
+      setPhotoBusy(false);
+      if (photoInput.current) photoInput.current.value = "";
+    }
+  }
+
+  async function removePhoto() {
+    setPhotoBusy(true);
+    const res = await fetch("/api/profile/avatar", { method: "DELETE" });
+    setPhotoBusy(false);
+    if (!res.ok) { toast.error("Impossible de retirer la photo"); return; }
+    setPhoto(null);
+    toast.success("Photo retirée");
+    router.refresh();
+  }
 
   const [pwd, setPwd] = useState({ currentPassword: "", newPassword: "", confirm: "" });
   const [savingPwd, setSavingPwd] = useState(false);
@@ -90,7 +126,18 @@ export function ProfileForm({ user, variant }: { user: ProfileUser; variant: "ad
       {/* Carte identité */}
       <div className="h-fit rounded-3xl border border-cream-300 bg-card p-6 text-center shadow-card">
         <div className="flex justify-center">
-          <Avatar name={isEntreprise ? form.companyName || form.name : form.name} color={form.avatarColor} size="lg" className="h-20 w-20 text-2xl" />
+          <Avatar name={isEntreprise ? form.companyName || form.name : form.name} color={form.avatarColor} src={photo} size="lg" className="h-24 w-24 text-3xl" />
+        </div>
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => uploadPhoto(e.target.files?.[0])} />
+          <button type="button" onClick={() => photoInput.current?.click()} disabled={photoBusy} className="rounded-full bg-forest-900 px-4 py-1.5 text-xs font-semibold text-cream-50 transition hover:bg-forest-700 disabled:opacity-60">
+            {photoBusy ? "Envoi…" : photo ? "Changer la photo" : "Ajouter une photo"}
+          </button>
+          {photo && (
+            <button type="button" onClick={removePhoto} disabled={photoBusy} className="rounded-full border border-cream-300 px-4 py-1.5 text-xs font-medium text-ink-600 hover:bg-cream-100 disabled:opacity-60">
+              Retirer
+            </button>
+          )}
         </div>
         <h2 className="mt-4 font-display text-xl font-semibold text-ink-900">
           {isEntreprise ? form.companyName || form.name : form.name}

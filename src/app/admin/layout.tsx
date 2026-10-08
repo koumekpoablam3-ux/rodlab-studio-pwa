@@ -30,6 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     );
   }
 
+  const me = await db.user.findUnique({ where: { id: session.user.id }, select: { avatarUrl: true, avatarColor: true, name: true } }).catch(() => null);
   const [newRequests, unreadThreads] = await Promise.all([
     access.can("requests") ? db.quoteRequest.count({ where: { status: "NEW" } }) : Promise.resolve(0),
     countUnread(session.user.id),
@@ -40,10 +41,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       variant="admin"
       user={{
         id: session.user.id,
-        name: session.user.name ?? "",
         email: session.user.email ?? "",
         role: session.user.role,
-        avatarColor: session.user.avatarColor,
+        name: me?.name ?? session.user.name ?? "",
+        avatarColor: me?.avatarColor ?? session.user.avatarColor,
+        avatarUrl: me?.avatarUrl ?? null,
         isDirector: access.isDirector,
       }}
       access={{ isDirector: access.isDirector, permissions: access.permissions }}

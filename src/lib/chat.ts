@@ -14,6 +14,7 @@ export const PUBLIC_USER_SELECT = {
   companyName: true,
   jobTitle: true,
   avatarColor: true,
+  avatarUrl: true,
   lastSeenAt: true,
 } as const;
 
@@ -24,6 +25,7 @@ type PublicUserRow = {
   companyName: string | null;
   jobTitle: string | null;
   avatarColor: string | null;
+  avatarUrl?: string | null;
   lastSeenAt: Date | null;
 };
 
@@ -36,6 +38,7 @@ export function toPublicUser(u: PublicUserRow) {
     role: u.role,
     subtitle: u.role === "ADMIN" ? u.jobTitle || "Équipe RodLab Studio" : u.role === "ENTREPRISE" ? u.name : u.jobTitle || "Client",
     avatarColor: u.avatarColor,
+    avatarUrl: u.avatarUrl ?? null,
     online,
     lastSeenAt: u.lastSeenAt ? u.lastSeenAt.toISOString() : null,
   };
