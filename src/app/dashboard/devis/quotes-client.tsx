@@ -144,8 +144,8 @@ function QuoteDetail({
 
   return (
     <div className="space-y-4 text-sm">
-      <div className="rounded-2xl border border-cream-200">
-        <table className="w-full">
+      <div className="overflow-x-auto rounded-2xl border border-cream-200">
+        <table className="w-full min-w-[420px]">
           <thead>
             <tr className="border-b border-cream-200 bg-cream-50 text-left text-xs uppercase text-ink-400">
               <th className="px-4 py-2.5 font-medium">Prestation</th>

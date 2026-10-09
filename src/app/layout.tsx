@@ -8,6 +8,7 @@ import { InstallPromptProvider } from "@/components/pwa/install-prompt";
 import { InstallBanner } from "@/components/pwa/install-banner";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { WhatsAppSupportWidget } from "@/components/chat/whatsapp-widget";
+import { PublicOnly } from "@/components/chat/public-only";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -74,8 +75,10 @@ export default function RootLayout({
             <Toaster />
             <PwaRegister />
             <InstallBanner />
-            <ChatWidget />
-            <WhatsAppSupportWidget />
+            <PublicOnly>
+              <ChatWidget />
+              <WhatsAppSupportWidget />
+            </PublicOnly>
           </InstallPromptProvider>
         </Providers>
       </body>

@@ -198,7 +198,7 @@ export function ProfileForm({ user, variant }: { user: ProfileUser; variant: "ad
               <Label htmlFor="pf-address">Adresse</Label>
               <Input id="pf-address" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} className="h-11 bg-white" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="pf-city">Ville</Label>
                 <Input id="pf-city" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} className="h-11 bg-white" />

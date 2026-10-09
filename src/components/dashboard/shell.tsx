@@ -43,6 +43,7 @@ const CLIENT_NAV: NavItem[] = [
   { href: "/dashboard/devis", label: "Devis", icon: FileText },
   { href: "/dashboard/factures", label: "Factures", icon: Receipt },
   { href: "/dashboard/messagerie", label: "Messagerie", icon: MessageSquare },
+  { href: "/dashboard/profil", label: "Mon profil", icon: CircleUserRound },
 ];
 
 const ENTREPRISE_NAV: NavItem[] = [
@@ -53,6 +54,7 @@ const ENTREPRISE_NAV: NavItem[] = [
   { href: "/dashboard/factures", label: "Factures", icon: Receipt },
   { href: "/dashboard/messagerie", label: "Messagerie", icon: MessageSquare },
   { href: "/dashboard/equipe", label: "Notre équipe", icon: UsersRound },
+  { href: "/dashboard/profil", label: "Mon profil", icon: CircleUserRound },
 ];
 
 export type ShellUser = {
@@ -257,11 +259,18 @@ export function DashboardShell({
 
       <div className="border-t border-forest-800 p-4">
         <div className="flex items-center gap-3">
-          <Avatar name={displayName} color={user.avatarColor} src={user.avatarUrl} size="sm" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-cream-50">{displayName}</p>
-            <p className="truncate text-xs text-forest-200/70">{user.isDirector ? "Directeur" : ROLE_LABELS[user.role]}</p>
-          </div>
+          <Link
+            href={variant === "admin" ? "/admin/profil" : "/dashboard/profil"}
+            onClick={() => setMobileOpen(false)}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-lg transition hover:opacity-90"
+            aria-label="Modifier mon profil"
+          >
+            <Avatar name={displayName} color={user.avatarColor} src={user.avatarUrl} size="sm" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-cream-50">{displayName}</span>
+              <span className="block truncate text-xs text-forest-200/70">{user.isDirector ? "Directeur" : ROLE_LABELS[user.role]}</span>
+            </span>
+          </Link>
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
             aria-label="Se déconnecter"
@@ -285,7 +294,7 @@ export function DashboardShell({
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-ink-900/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-72 shadow-lift">{sidebar}</div>
+          <div className="absolute left-0 top-0 h-[100dvh] w-72 max-w-[85vw] shadow-lift">{sidebar}</div>
         </div>
       )}
 
@@ -311,7 +320,6 @@ export function DashboardShell({
             <NotificationBell />
             <Link
               href={variant === "admin" ? "/admin/profil" : "/dashboard/profil"}
-              className="hidden sm:block"
               aria-label="Mon profil"
             >
               <Avatar name={displayName} color={user.avatarColor} src={user.avatarUrl} size="sm" />

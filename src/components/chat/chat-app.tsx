@@ -326,7 +326,7 @@ export function ChatApp({
   const isGroup = others.length > 1;
 
   return (
-    <div className="flex h-[calc(100dvh-16rem)] min-h-[440px] overflow-hidden lg:h-[calc(100dvh-18.5rem)] rounded-3xl border border-cream-300 bg-white shadow-card">
+    <div className="flex h-[calc(100dvh-8.5rem)] min-h-[420px] overflow-hidden rounded-3xl sm:h-[calc(100dvh-16rem)] lg:h-[calc(100dvh-18.5rem)] border border-cream-300 bg-white shadow-card">
       {/* ═════════ Colonne gauche ═════════ */}
       <aside className={cn("flex w-full shrink-0 flex-col border-r border-cream-300 md:w-80 lg:w-96", mobileChat ? "hidden md:flex" : "flex")}>
         <div className="space-y-3 border-b border-cream-300 p-4">
