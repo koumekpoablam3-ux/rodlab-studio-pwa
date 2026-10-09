@@ -149,8 +149,8 @@ export default async function HomePage() {
       {/* ————— HERO (fond : carrousel auto-défilant des visuels RodLab) ————— */}
       <section className="relative overflow-hidden bg-hero-glow" aria-labelledby="hero-title">
         <HeroCarousel slides={slides} />
-        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-8 lg:px-8 lg:pb-24 lg:pt-20">
-          <div>
+        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start lg:gap-8 lg:px-8 lg:pb-24 lg:pt-14">
+          <div className="lg:pt-6">
             <p className="inline-flex items-center gap-2 rounded-full border border-terra-200 bg-terra-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-terra-700">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-terra-500" aria-hidden="true" />
               Agence créative — Lomé, Togo
