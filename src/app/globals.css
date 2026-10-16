@@ -1,0 +1,251 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================
+   RODLAB STUDIO — Thème « Clair & Signature »
+   Crème chaud · Encre · Terracotta · Vert forêt · Doré
+   ============================================ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* — Palette signature RodLab — */
+  --color-cream-50: #fdfbf6;
+  --color-cream-100: #faf6ee;
+  --color-cream-200: #f4eee1;
+  --color-cream-300: #eae1cd;
+  --color-cream-400: #ddd0b6;
+  --color-ink-900: #1b1713;
+  --color-ink-700: #453d33;
+  --color-ink-500: #75695c;
+  --color-ink-400: #8d8172;
+  --color-ink-300: #a89c8c;
+  --color-terra-50: #fcf1ea;
+  --color-terra-100: #f9e1d3;
+  --color-terra-200: #f2c9b1;
+  --color-terra-300: #e7a583;
+  --color-terra-400: #db8158;
+  --color-terra-500: #d2603a;
+  --color-terra-600: #bd4f2b;
+  --color-terra-700: #9c4226;
+  --color-forest-50: #eff6f1;
+  --color-forest-100: #dcebe1;
+  --color-forest-200: #b9d6c4;
+  --color-forest-400: #52936f;
+  --color-forest-500: #357a55;
+  --color-forest-600: #276144;
+  --color-forest-700: #1f4e38;
+  --color-forest-800: #16382a;
+  --color-forest-900: #102a20;
+  --color-gold-100: #f9efd8;
+  --color-gold-200: #f2dfb3;
+  --color-gold-400: #e2b45a;
+  --color-gold-500: #d69e35;
+  --color-gold-600: #b98224;
+
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+
+  --background-image-terra-gold: linear-gradient(120deg, #d2603a 0%, #d69e35 100%);
+  --background-image-hero-glow:
+    radial-gradient(circle at 12% 8%, rgba(210, 96, 58, 0.13), transparent 46%),
+    radial-gradient(circle at 88% 0%, rgba(214, 158, 53, 0.17), transparent 48%),
+    radial-gradient(circle at 70% 92%, rgba(53, 122, 85, 0.1), transparent 46%);
+
+  --shadow-card: 0 1px 2px rgba(27, 23, 19, 0.04), 0 10px 30px -12px rgba(27, 23, 19, 0.1);
+  --shadow-lift: 0 2px 4px rgba(27, 23, 19, 0.05), 0 18px 44px -14px rgba(27, 23, 19, 0.16);
+  --shadow-chip: 0 4px 14px -4px rgba(210, 96, 58, 0.35);
+
+  --animate-fade-up: fade-up 0.8s ease-out forwards;
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes fade-up {
+    0% { opacity: 0; transform: translateY(24px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: #faf6ee;
+  --foreground: #1b1713;
+  --card: #fffdf8;
+  --card-foreground: #1b1713;
+  --popover: #fffdf8;
+  --popover-foreground: #1b1713;
+  --primary: #bd4f2b;
+  --primary-foreground: #fdfbf6;
+  --secondary: #276144;
+  --secondary-foreground: #fdfbf6;
+  --muted: #f4eee1;
+  --muted-foreground: #75695c;
+  --accent: #f9efd8;
+  --accent-foreground: #9c4226;
+  --destructive: #b3261e;
+  --border: #eae1cd;
+  --input: #e0d6c0;
+  --ring: #d2603a;
+  --chart-1: #d2603a;
+  --chart-2: #357a55;
+  --chart-3: #d69e35;
+  --chart-4: #e7a583;
+  --chart-5: #52936f;
+  --sidebar: #102a20;
+  --sidebar-foreground: #dcebe1;
+  --sidebar-primary: #d2603a;
+  --sidebar-primary-foreground: #fdfbf6;
+  --sidebar-accent: #16382a;
+  --sidebar-accent-foreground: #faf6ee;
+  --sidebar-border: #1f4e38;
+  --sidebar-ring: #d2603a;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background-color: rgba(210, 96, 58, 0.22);
+  color: #1b1713;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #f4eee1;
+}
+::-webkit-scrollbar-thumb {
+  background: #ddd0b6;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c9b896;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #ddd0b6;
+}
+
+/* Utilitaires signature */
+.font-display {
+  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+}
+
+.bg-hero-glow {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(210, 96, 58, 0.13), transparent 46%),
+    radial-gradient(circle at 88% 0%, rgba(214, 158, 53, 0.17), transparent 48%),
+    radial-gradient(circle at 70% 92%, rgba(53, 122, 85, 0.1), transparent 46%);
+}
+
+.bg-terra-gold {
+  background-image: linear-gradient(120deg, #d2603a 0%, #d69e35 100%);
+}
+
+.text-terra-gold {
+  background-image: linear-gradient(120deg, #bd4f2b 0%, #b98224 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.woven-pattern {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(189, 79, 43, 0.05) 0 2px, transparent 2px 12px),
+    repeating-linear-gradient(-45deg, rgba(39, 97, 68, 0.05) 0 2px, transparent 2px 12px);
+}
+
+/* Impression des devis et factures */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Bannière d'installation PWA (v8.6) */
+@keyframes install-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-install-banner {
+  animation: install-banner-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media print {
+  .animate-install-banner {
+    display: none !important;
+  }
+}
